@@ -133,6 +133,42 @@ extension File.System.Write {
     }
 }
 
+// MARK: - Binary.Serializable
+
+extension File.System.Write.Atomic {
+    /// Atomically writes a Binary.Serializable value to a file path.
+    ///
+    /// Uses `withSerializedBytes` for zero-copy access when the type supports it.
+    ///
+    /// - Parameters:
+    ///   - value: The serializable value to write
+    ///   - path: Destination file path
+    ///   - options: Write options
+    /// - Throws: `File.System.Write.Atomic.Error` on failure
+    public static func write<S: Binary.Serializable>(
+        _ value: S,
+        to path: File.Path,
+        options: Options = Options()
+    ) throws(Error) {
+        try S.withSerializedBytes(value) { (span: borrowing Span<UInt8>) throws(Error) in
+            try write(span, to: path, options: options)
+        }
+    }
+
+    /// Atomically writes a Binary.Serializable value to a file path.
+    ///
+    /// Async variant.
+    public static func write<S: Binary.Serializable>(
+        _ value: S,
+        to path: File.Path,
+        options: Options = Options()
+    ) async throws(Error) {
+        try S.withSerializedBytes(value) { (span: borrowing Span<UInt8>) throws(Error) in
+            try write(span, to: path, options: options)
+        }
+    }
+}
+
 // MARK: - Internal Helpers
 
 extension File.System.Write.Atomic {
