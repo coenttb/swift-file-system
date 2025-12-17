@@ -179,7 +179,7 @@ extension File.System.Write {
             }
         }
 
-        // MARK: - Public API
+        // MARK: - Public API (File.Path)
 
         /// Atomically writes bytes to a file path using a zero-copy Span.
         ///
@@ -192,7 +192,6 @@ extension File.System.Write {
         ///
         /// ## Requirements
         /// - Parent directory must exist and be writable
-        /// - Path should ideally be absolute; relative paths use current working directory
         ///
         /// - Parameters:
         ///   - bytes: The data to write (borrowed, not copied)
@@ -201,24 +200,14 @@ extension File.System.Write {
         /// - Throws: `File.System.Write.Atomic.Error` on failure
         public static func write(
             _ bytes: borrowing Swift.Span<UInt8>,
-            to path: borrowing String,
+            to path: File.Path,
             options: borrowing Options = Options()
         ) throws(Error) {
-            // Validate path
-            guard !path.isEmpty else {
-                throw .invalidPath(reason: "path is empty")
-            }
-
-            // Check for any control characters (NUL, LF, CR, etc.)
-            // Control characters can break path parsing and are invalid in file paths
-            if path.utf8.contains(where: \.ascii.isControl) {
-                throw .invalidPath(reason: "path contains control characters")
-            }
-
+            // File.Path is guaranteed to be non-empty and free of control characters
             #if os(Windows)
-            try WindowsAtomic.writeSpan(bytes, to: path, options: options)
+            try WindowsAtomic.writeSpan(bytes, to: path.string, options: options)
             #else
-            try POSIXAtomic.writeSpan(bytes, to: path, options: options)
+            try POSIXAtomic.writeSpan(bytes, to: path.string, options: options)
             #endif
         }
 
@@ -231,7 +220,6 @@ extension File.System.Write {
         ///
         /// ## Requirements
         /// - Parent directory must exist and be writable
-        /// - Path should ideally be absolute; relative paths use current working directory
         ///
         /// - Parameters:
         ///   - bytes: The data to write
@@ -241,7 +229,7 @@ extension File.System.Write {
         @inlinable
         public static func write(
             _ bytes: [UInt8],
-            to path: String,
+            to path: File.Path,
             options: Options = Options()
         ) throws(Error) {
             try bytes.withUnsafeBufferPointer { buffer throws(Error) in
@@ -254,7 +242,7 @@ extension File.System.Write {
         @inlinable
         public static func write<C: Collection>(
             contentsOf bytes: C,
-            to path: String,
+            to path: File.Path,
             options: Options = Options()
         ) throws(Error) where C.Element == UInt8 {
             try write(Array(bytes), to: path, options: options)
@@ -267,7 +255,7 @@ extension File.System.Write {
         @inlinable
         public static func write(
             _ buffer: UnsafeBufferPointer<UInt8>,
-            to path: String,
+            to path: File.Path,
             options: Options = Options()
         ) throws(Error) {
             let span = Swift.Span(_unsafeElements: buffer)
@@ -278,14 +266,14 @@ extension File.System.Write {
         @inlinable
         public static func write(
             _ buffer: UnsafeRawBufferPointer,
-            to path: String,
+            to path: File.Path,
             options: Options = Options()
         ) throws(Error) {
             let span = Swift.Span<UInt8>(_unsafeBytes: buffer)
             try write(span, to: path, options: options)
         }
 
-        // MARK: - Binary.Serializable
+        // MARK: - Binary.Serializable (File.Path)
 
         /// Atomically writes a Binary.Serializable value to a file path.
         ///
@@ -294,7 +282,7 @@ extension File.System.Write {
         ///
         /// ## Example
         /// ```swift
-        /// try File.System.Write.Atomic.write(document, to: "/path/to/file.pdf")
+        /// try File.System.Write.Atomic.write(document, to: File.Path("/path/to/file.pdf"))
         /// ```
         ///
         /// - Parameters:
@@ -305,7 +293,7 @@ extension File.System.Write {
         @inlinable
         public static func write<S: Binary.Serializable>(
             _ serializable: S,
-            to path: String,
+            to path: File.Path,
             options: Options = Options()
         ) throws(Error) {
             var buffer: [UInt8] = []
@@ -327,7 +315,7 @@ extension File.System.Write {
         @inlinable
         public static func write<S: Binary.Serializable>(
             _ serializable: S,
-            to path: String,
+            to path: File.Path,
             bufferCapacity: Int,
             options: Options = Options()
         ) throws(Error) {
@@ -336,10 +324,138 @@ extension File.System.Write {
             S.serialize(serializable, into: &buffer)
             try write(buffer, to: path, options: options)
         }
+
+        // MARK: - Public API (String convenience)
+
+        /// Atomically writes bytes to a file path using a zero-copy Span.
+        ///
+        /// This is a convenience overload that accepts a `String` path.
+        /// Prefer using `File.Path` for type safety.
+        @inlinable
+        public static func write(
+            _ bytes: borrowing Swift.Span<UInt8>,
+            to path: String,
+            options: borrowing Options = Options()
+        ) throws(Error) {
+            let filePath: File.Path
+            do { filePath = try File.Path(path) }
+            catch { throw .init(error) }
+            try write(bytes, to: filePath, options: options)
+        }
+
+        /// Atomically writes bytes to a file path.
+        ///
+        /// This is a convenience overload that accepts a `String` path.
+        /// Prefer using `File.Path` for type safety.
+        @inlinable
+        public static func write(
+            _ bytes: [UInt8],
+            to path: String,
+            options: Options = Options()
+        ) throws(Error) {
+            let filePath: File.Path
+            do { filePath = try File.Path(path) }
+            catch { throw .init(error) }
+            try write(bytes, to: filePath, options: options)
+        }
+
+        /// Atomically writes a contiguous collection of bytes to a file path.
+        ///
+        /// This is a convenience overload that accepts a `String` path.
+        /// Prefer using `File.Path` for type safety.
+        @inlinable
+        public static func write<C: Collection>(
+            contentsOf bytes: C,
+            to path: String,
+            options: Options = Options()
+        ) throws(Error) where C.Element == UInt8 {
+            let filePath: File.Path
+            do { filePath = try File.Path(path) }
+            catch { throw .init(error) }
+            try write(contentsOf: bytes, to: filePath, options: options)
+        }
+
+        /// Atomically writes an unsafe buffer pointer to a file path.
+        ///
+        /// This is a convenience overload that accepts a `String` path.
+        /// Prefer using `File.Path` for type safety.
+        @inlinable
+        public static func write(
+            _ buffer: UnsafeBufferPointer<UInt8>,
+            to path: String,
+            options: Options = Options()
+        ) throws(Error) {
+            let filePath: File.Path
+            do { filePath = try File.Path(path) }
+            catch { throw .init(error) }
+            try write(buffer, to: filePath, options: options)
+        }
+
+        /// Atomically writes raw bytes from an unsafe raw buffer pointer.
+        ///
+        /// This is a convenience overload that accepts a `String` path.
+        /// Prefer using `File.Path` for type safety.
+        @inlinable
+        public static func write(
+            _ buffer: UnsafeRawBufferPointer,
+            to path: String,
+            options: Options = Options()
+        ) throws(Error) {
+            let filePath: File.Path
+            do { filePath = try File.Path(path) }
+            catch { throw .init(error) }
+            try write(buffer, to: filePath, options: options)
+        }
+
+        /// Atomically writes a Binary.Serializable value to a file path.
+        ///
+        /// This is a convenience overload that accepts a `String` path.
+        /// Prefer using `File.Path` for type safety.
+        @inlinable
+        public static func write<S: Binary.Serializable>(
+            _ serializable: S,
+            to path: String,
+            options: Options = Options()
+        ) throws(Error) {
+            let filePath: File.Path
+            do { filePath = try File.Path(path) }
+            catch { throw .init(error) }
+            try write(serializable, to: filePath, options: options)
+        }
+
+        /// Atomically writes a Binary.Serializable value with a capacity hint.
+        ///
+        /// This is a convenience overload that accepts a `String` path.
+        /// Prefer using `File.Path` for type safety.
+        @inlinable
+        public static func write<S: Binary.Serializable>(
+            _ serializable: S,
+            to path: String,
+            bufferCapacity: Int,
+            options: Options = Options()
+        ) throws(Error) {
+            let filePath: File.Path
+            do { filePath = try File.Path(path) }
+            catch { throw .init(error) }
+            try write(serializable, to: filePath, bufferCapacity: bufferCapacity, options: options)
+        }
     }
 }
 
 // MARK: - Internal Helpers
+
+extension File.System.Write.Atomic.Error {
+    /// Creates an error from a `File.Path.Error`.
+    @usableFromInline
+    init(_ pathError: File.Path.Error) {
+        switch pathError {
+        case .empty:
+            self = .invalidPath(reason: "path is empty")
+        case .containsControlCharacters:
+            self = .invalidPath(reason: "path contains control characters")
+        }
+    }
+}
 
 extension File.System.Write.Atomic {
     /// Converts errno to a human-readable message.

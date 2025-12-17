@@ -1,0 +1,11 @@
+//
+//  File.Directory.swift
+//  swift-file-system
+//
+//  Created by Coen ten Thije Boonkkamp on 17/12/2025.
+//
+
+extension File {
+    /// Namespace for directory-specific operations.
+    public enum Directory {}
+}
