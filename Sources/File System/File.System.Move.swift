@@ -5,10 +5,22 @@
 //  Created by Coen ten Thije Boonkkamp on 17/12/2025.
 //
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import WinSDK
+#endif
+
 extension File.System {
     /// Namespace for file move/rename operations.
     public enum Move {}
 }
+
+// MARK: - Options
 
 extension File.System.Move {
     /// Options for move operations.
@@ -20,13 +32,105 @@ extension File.System.Move {
             self.overwrite = overwrite
         }
     }
+}
 
-    /// Error type for move operations.
+// MARK: - Error
+
+extension File.System.Move {
+    /// Errors that can occur during move operations.
     public enum Error: Swift.Error, Equatable, Sendable {
         case sourceNotFound(File.Path)
         case destinationExists(File.Path)
         case permissionDenied(File.Path)
-        case crossDevice(source: File.Path, destination: File.Path)
         case moveFailed(errno: Int32, message: String)
+    }
+}
+
+// MARK: - Core API
+
+extension File.System.Move {
+    /// Moves (renames) a file from source to destination.
+    ///
+    /// Uses atomic `rename()` when possible. Falls back to copy+delete
+    /// for cross-device moves.
+    ///
+    /// - Parameters:
+    ///   - source: The source file path.
+    ///   - destination: The destination file path.
+    /// - Throws: `File.System.Move.Error` on failure.
+    public static func move(
+        from source: File.Path,
+        to destination: File.Path
+    ) throws(Error) {
+        #if os(Windows)
+        try _moveWindows(from: source, to: destination, options: Options())
+        #else
+        try _movePOSIX(from: source, to: destination, options: Options())
+        #endif
+    }
+
+    /// Moves (renames) a file from source to destination with options.
+    ///
+    /// - Parameters:
+    ///   - source: The source file path.
+    ///   - destination: The destination file path.
+    ///   - options: Move options.
+    /// - Throws: `File.System.Move.Error` on failure.
+    public static func move(
+        from source: File.Path,
+        to destination: File.Path,
+        options: Options
+    ) throws(Error) {
+        #if os(Windows)
+        try _moveWindows(from: source, to: destination, options: options)
+        #else
+        try _movePOSIX(from: source, to: destination, options: options)
+        #endif
+    }
+
+    /// Moves (renames) a file from source to destination.
+    ///
+    /// Async variant.
+    public static func move(
+        from source: File.Path,
+        to destination: File.Path
+    ) async throws(Error) {
+        #if os(Windows)
+        try _moveWindows(from: source, to: destination, options: Options())
+        #else
+        try _movePOSIX(from: source, to: destination, options: Options())
+        #endif
+    }
+
+    /// Moves (renames) a file from source to destination with options.
+    ///
+    /// Async variant.
+    public static func move(
+        from source: File.Path,
+        to destination: File.Path,
+        options: Options
+    ) async throws(Error) {
+        #if os(Windows)
+        try _moveWindows(from: source, to: destination, options: options)
+        #else
+        try _movePOSIX(from: source, to: destination, options: options)
+        #endif
+    }
+}
+
+// MARK: - CustomStringConvertible for Error
+
+extension File.System.Move.Error: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .sourceNotFound(let path):
+            return "Source not found: \(path)"
+        case .destinationExists(let path):
+            return "Destination already exists: \(path)"
+        case .permissionDenied(let path):
+            return "Permission denied: \(path)"
+        case .moveFailed(let errno, let message):
+            return "Move failed: \(message) (errno=\(errno))"
+        }
     }
 }

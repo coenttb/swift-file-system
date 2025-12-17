@@ -5,10 +5,22 @@
 //  Created by Coen ten Thije Boonkkamp on 17/12/2025.
 //
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import WinSDK
+#endif
+
 extension File.System {
     /// Namespace for file copy operations.
     public enum Copy {}
 }
+
+// MARK: - Options
 
 extension File.System.Copy {
     /// Options for copy operations.
@@ -32,14 +44,105 @@ extension File.System.Copy {
             self.followSymlinks = followSymlinks
         }
     }
+}
 
-    /// Error type for copy operations.
+// MARK: - Error
+
+extension File.System.Copy {
+    /// Errors that can occur during copy operations.
     public enum Error: Swift.Error, Equatable, Sendable {
         case sourceNotFound(File.Path)
         case destinationExists(File.Path)
         case permissionDenied(File.Path)
         case isDirectory(File.Path)
-        case crossDevice(source: File.Path, destination: File.Path)
         case copyFailed(errno: Int32, message: String)
+    }
+}
+
+// MARK: - Core API
+
+extension File.System.Copy {
+    /// Copies a file from source to destination.
+    ///
+    /// - Parameters:
+    ///   - source: The source file path.
+    ///   - destination: The destination file path.
+    /// - Throws: `File.System.Copy.Error` on failure.
+    public static func copy(
+        from source: File.Path,
+        to destination: File.Path
+    ) throws(Error) {
+        #if os(Windows)
+        try _copyWindows(from: source, to: destination, options: Options())
+        #else
+        try _copyPOSIX(from: source, to: destination, options: Options())
+        #endif
+    }
+
+    /// Copies a file from source to destination with options.
+    ///
+    /// - Parameters:
+    ///   - source: The source file path.
+    ///   - destination: The destination file path.
+    ///   - options: Copy options.
+    /// - Throws: `File.System.Copy.Error` on failure.
+    public static func copy(
+        from source: File.Path,
+        to destination: File.Path,
+        options: Options
+    ) throws(Error) {
+        #if os(Windows)
+        try _copyWindows(from: source, to: destination, options: options)
+        #else
+        try _copyPOSIX(from: source, to: destination, options: options)
+        #endif
+    }
+
+    /// Copies a file from source to destination.
+    ///
+    /// Async variant.
+    public static func copy(
+        from source: File.Path,
+        to destination: File.Path
+    ) async throws(Error) {
+        #if os(Windows)
+        try _copyWindows(from: source, to: destination, options: Options())
+        #else
+        try _copyPOSIX(from: source, to: destination, options: Options())
+        #endif
+    }
+
+    /// Copies a file from source to destination with options.
+    ///
+    /// Async variant.
+    public static func copy(
+        from source: File.Path,
+        to destination: File.Path,
+        options: Options
+    ) async throws(Error) {
+        #if os(Windows)
+        try _copyWindows(from: source, to: destination, options: options)
+        #else
+        try _copyPOSIX(from: source, to: destination, options: options)
+        #endif
+    }
+}
+
+// MARK: - CustomStringConvertible for Error
+
+extension File.System.Copy.Error: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .sourceNotFound(let path):
+            return "Source not found: \(path)"
+        case .destinationExists(let path):
+            return "Destination already exists: \(path)"
+        case .permissionDenied(let path):
+            return "Permission denied: \(path)"
+        case .isDirectory(let path):
+            return "Is a directory: \(path)"
+        case .copyFailed(let errno, let message):
+            return "Copy failed: \(message) (errno=\(errno))"
+        }
     }
 }
