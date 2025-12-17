@@ -17,16 +17,42 @@ extension File.Path {
         internal var _component: FilePath.Component
 
         /// Creates a component from a SystemPackage FilePath.Component.
-        @inlinable
-        internal init(_ component: FilePath.Component) {
+        @usableFromInline
+        internal init(__unchecked component: FilePath.Component) {
             self._component = component
         }
 
-        /// Creates a component from a string.
+        /// Creates a validated component from a string.
+        ///
+        /// - Parameter string: The component string.
+        /// - Throws: `File.Path.Component.Error` if the string is invalid.
         @inlinable
-        public init(_ string: String) {
-            self._component = FilePath.Component(string)!
+        public init(_ string: String) throws(Error) {
+            guard !string.isEmpty else {
+                throw .empty
+            }
+            guard !string.contains("/") else {
+                throw .containsPathSeparator
+            }
+            guard let component = FilePath.Component(string) else {
+                throw .invalid
+            }
+            self._component = component
         }
+    }
+}
+
+// MARK: - Error
+
+extension File.Path.Component {
+    /// Errors that can occur during component construction.
+    public enum Error: Swift.Error, Equatable, Sendable {
+        /// The component string is empty.
+        case empty
+        /// The component contains a path separator.
+        case containsPathSeparator
+        /// The component is invalid.
+        case invalid
     }
 }
 
@@ -78,8 +104,31 @@ extension File.Path.Component: CustomDebugStringConvertible {
 // MARK: - ExpressibleByStringLiteral
 
 extension File.Path.Component: ExpressibleByStringLiteral {
+    /// Creates a component from a string literal.
+    ///
+    /// String literals are compile-time constants, so validation failures
+    /// are programmer errors and will trigger a fatal error.
     @inlinable
     public init(stringLiteral value: String) {
-        self.init(value)
+        do {
+            try self.init(value)
+        } catch {
+            fatalError("Invalid component literal: \(error)")
+        }
+    }
+}
+
+// MARK: - CustomStringConvertible for Error
+
+extension File.Path.Component.Error: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .empty:
+            return "Component is empty"
+        case .containsPathSeparator:
+            return "Component contains path separator"
+        case .invalid:
+            return "Component is invalid"
+        }
     }
 }

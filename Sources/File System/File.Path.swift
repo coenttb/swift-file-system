@@ -119,7 +119,7 @@ extension File.Path {
     /// The last component of the path, or `nil` if the path is empty.
     @inlinable
     public var lastComponent: Component? {
-        _path.lastComponent.map(Component.init)
+        _path.lastComponent.map { Component(__unchecked: $0) }
     }
 
     /// The file extension, or `nil` if there is none.
