@@ -84,11 +84,7 @@ extension File.Directory.Contents {
         var entries: [File.Directory.Entry] = []
 
         while let entry = readdir(dir) {
-            let name = withUnsafePointer(to: entry.pointee.d_name) { ptr in
-                ptr.withMemoryRebound(to: CChar.self, capacity: Int(NAME_MAX)) { cstr in
-                    String(cString: cstr)
-                }
-            }
+            let name = String(posixDirectoryEntryName: entry.pointee.d_name)
 
             // Skip . and ..
             if name == "." || name == ".." {
@@ -192,11 +188,7 @@ extension File.Directory.Contents {
         defer { FindClose(handle) }
 
         repeat {
-            let name = withUnsafePointer(to: findData.cFileName) { ptr in
-                ptr.withMemoryRebound(to: UInt16.self, capacity: Int(MAX_PATH)) { wstr in
-                    String(decodingCString: wstr, as: UTF16.self)
-                }
-            }
+            let name = String(windowsDirectoryEntryName: findData.cFileName)
 
             // Skip . and ..
             if name == "." || name == ".." {

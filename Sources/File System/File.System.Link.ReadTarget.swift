@@ -151,8 +151,9 @@ extension File.System.Link.ReadTarget {
 
         // Get the final path name
         var buffer = [UInt16](repeating: 0, count: Int(MAX_PATH) + 1)
-        let length = buffer.withUnsafeMutableBufferPointer { ptr in
-            GetFinalPathNameByHandleW(handle, ptr.baseAddress!, DWORD(MAX_PATH), DWORD(FILE_NAME_NORMALIZED))
+        let length = buffer.withUnsafeMutableBufferPointer { ptr -> DWORD in
+            guard let base = ptr.baseAddress else { return 0 }
+            return GetFinalPathNameByHandleW(handle, base, DWORD(MAX_PATH), DWORD(FILE_NAME_NORMALIZED))
         }
 
         guard length > 0 && length < MAX_PATH else {

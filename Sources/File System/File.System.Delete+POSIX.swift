@@ -53,11 +53,7 @@ extension File.System.Delete {
 
         // Iterate through entries
         while let entry = readdir(dir) {
-            let name = withUnsafePointer(to: entry.pointee.d_name) { ptr in
-                ptr.withMemoryRebound(to: CChar.self, capacity: Int(NAME_MAX)) { cstr in
-                    String(cString: cstr)
-                }
-            }
+            let name = String(posixDirectoryEntryName: entry.pointee.d_name)
 
             // Skip . and ..
             if name == "." || name == ".." {

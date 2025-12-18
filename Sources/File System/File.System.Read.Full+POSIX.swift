@@ -51,16 +51,19 @@ extension File.System.Read.Full {
         while totalRead < fileSize {
             let remaining = fileSize - totalRead
             #if canImport(Darwin)
-            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr in
-                Darwin.read(fd, ptr.baseAddress!.advanced(by: totalRead), remaining)
+            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
+                guard let base = ptr.baseAddress else { return 0 }
+                return Darwin.read(fd, base.advanced(by: totalRead), remaining)
             }
             #elseif canImport(Glibc)
-            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr in
-                Glibc.read(fd, ptr.baseAddress!.advanced(by: totalRead), remaining)
+            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
+                guard let base = ptr.baseAddress else { return 0 }
+                return Glibc.read(fd, base.advanced(by: totalRead), remaining)
             }
             #elseif canImport(Musl)
-            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr in
-                Musl.read(fd, ptr.baseAddress!.advanced(by: totalRead), remaining)
+            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
+                guard let base = ptr.baseAddress else { return 0 }
+                return Musl.read(fd, base.advanced(by: totalRead), remaining)
             }
             #endif
 

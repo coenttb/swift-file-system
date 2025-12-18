@@ -77,16 +77,19 @@ extension File.System.Copy {
 
         while true {
             #if canImport(Darwin)
-            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr in
-                Darwin.read(srcFd, ptr.baseAddress!, bufferSize)
+            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
+                guard let base = ptr.baseAddress else { return 0 }
+                return Darwin.read(srcFd, base, bufferSize)
             }
             #elseif canImport(Glibc)
-            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr in
-                Glibc.read(srcFd, ptr.baseAddress!, bufferSize)
+            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
+                guard let base = ptr.baseAddress else { return 0 }
+                return Glibc.read(srcFd, base, bufferSize)
             }
             #elseif canImport(Musl)
-            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr in
-                Musl.read(srcFd, ptr.baseAddress!, bufferSize)
+            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
+                guard let base = ptr.baseAddress else { return 0 }
+                return Musl.read(srcFd, base, bufferSize)
             }
             #endif
 
@@ -98,8 +101,9 @@ extension File.System.Copy {
 
             var written = 0
             while written < bytesRead {
-                let w = buffer.withUnsafeBufferPointer { ptr in
-                    write(dstFd, ptr.baseAddress!.advanced(by: written), bytesRead - written)
+                let w = buffer.withUnsafeBufferPointer { ptr -> Int in
+                    guard let base = ptr.baseAddress else { return 0 }
+                    return write(dstFd, base.advanced(by: written), bytesRead - written)
                 }
                 if w < 0 {
                     if errno == EINTR { continue }

@@ -163,8 +163,9 @@ extension File.Handle {
 
         #if os(Windows)
         var bytesRead: DWORD = 0
-        let success = buffer.withUnsafeMutableBufferPointer { ptr in
-            ReadFile(_descriptor.rawHandle!, ptr.baseAddress, DWORD(count), &bytesRead, nil)
+        let success = buffer.withUnsafeMutableBufferPointer { ptr -> Bool in
+            guard let base = ptr.baseAddress, let handle = _descriptor.rawHandle else { return false }
+            return ReadFile(handle, base, DWORD(count), &bytesRead, nil)
         }
         guard success else {
             throw .readFailed(errno: Int32(GetLastError()), message: "ReadFile failed")
@@ -173,8 +174,9 @@ extension File.Handle {
             buffer.removeLast(count - Int(bytesRead))
         }
         #else
-        let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr in
-            Darwin.read(_descriptor.rawValue, ptr.baseAddress!, count)
+        let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
+            guard let base = ptr.baseAddress else { return 0 }
+            return Darwin.read(_descriptor.rawValue, base, count)
         }
         if bytesRead < 0 {
             throw .readFailed(errno: errno, message: String(cString: strerror(errno)))

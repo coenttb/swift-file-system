@@ -384,7 +384,8 @@ extension WindowsAtomic {
         let fileNameOffset = MemoryLayout.offset(of: \FILE_RENAME_INFO.FileName)!
         let fileNamePtr = buffer.advanced(by: fileNameOffset).assumingMemoryBound(to: WCHAR.self)
         destWide.withUnsafeBufferPointer { src in
-            fileNamePtr.update(from: src.baseAddress!, count: destWide.count)
+            guard let srcBase = src.baseAddress else { return }
+            fileNamePtr.update(from: srcBase, count: destWide.count)
         }
 
         let success = SetFileInformationByHandle(
@@ -516,7 +517,11 @@ extension WindowsAtomic {
     ) -> T {
         var wideChars = Array(string.utf16) + [0]
         return wideChars.withUnsafeBufferPointer { buffer in
-            buffer.baseAddress!.withMemoryRebound(to: WCHAR.self, capacity: buffer.count) { ptr in
+            // Buffer always has at least 1 element (null terminator)
+            guard let base = buffer.baseAddress else {
+                preconditionFailure("Buffer with count \(buffer.count) has nil baseAddress")
+            }
+            return base.withMemoryRebound(to: WCHAR.self, capacity: buffer.count) { ptr in
                 body(ptr)
             }
         }

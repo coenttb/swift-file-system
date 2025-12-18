@@ -131,11 +131,7 @@ extension File.Directory.Iterator {
         }
 
         while let entry = readdir(dir) {
-            let name = withUnsafePointer(to: entry.pointee.d_name) { ptr in
-                ptr.withMemoryRebound(to: CChar.self, capacity: Int(NAME_MAX)) { cstr in
-                    String(cString: cstr)
-                }
-            }
+            let name = String(posixDirectoryEntryName: entry.pointee.d_name)
 
             // Skip . and ..
             if name == "." || name == ".." {
@@ -250,11 +246,7 @@ extension File.Directory.Iterator {
         }
 
         while true {
-            let name = withUnsafePointer(to: _findData.cFileName) { ptr in
-                ptr.withMemoryRebound(to: UInt16.self, capacity: Int(MAX_PATH)) { wstr in
-                    String(decodingCString: wstr, as: UTF16.self)
-                }
-            }
+            let name = String(windowsDirectoryEntryName: _findData.cFileName)
 
             // Advance to next entry for next call
             if !FindNextFileW(handle, &_findData) {

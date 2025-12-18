@@ -62,11 +62,7 @@ extension File.System.Delete {
         defer { FindClose(handle) }
 
         repeat {
-            let name = withUnsafePointer(to: findData.cFileName) { ptr in
-                ptr.withMemoryRebound(to: UInt16.self, capacity: Int(MAX_PATH)) { wstr in
-                    String(decodingCString: wstr, as: UTF16.self)
-                }
-            }
+            let name = String(windowsDirectoryEntryName: findData.cFileName)
 
             // Skip . and ..
             if name == "." || name == ".." {
