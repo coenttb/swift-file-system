@@ -528,18 +528,12 @@ extension File.System.Async.Test.Unit {
                     )
                 )
 
-                // Track execution
-                let cooperativeCount = ManagedAtomic(0)
-                let dedicatedCount = ManagedAtomic(0)
-
                 // Run interleaved work on both executors
                 try await withThrowingTaskGroup(of: String.self) { group in
                     // Submit to cooperative
                     for i in 0..<10 {
                         group.addTask {
                             try await cooperativeExecutor.run {
-                                let c = cooperativeCount.load(ordering: .acquiring)
-                                cooperativeCount.store(c + 1, ordering: .releasing)
                                 // Use blocking sleep since async not allowed in sync closure
                                 Thread.sleep(forTimeInterval: 0.001)
                                 return "coop-\(i)"
@@ -551,8 +545,6 @@ extension File.System.Async.Test.Unit {
                     for i in 0..<10 {
                         group.addTask {
                             try await dedicatedExecutor.run {
-                                let d = dedicatedCount.load(ordering: .acquiring)
-                                dedicatedCount.store(d + 1, ordering: .releasing)
                                 Thread.sleep(forTimeInterval: 0.01)  // Blocking
                                 return "dedicated-\(i)"
                             }
@@ -571,10 +563,6 @@ extension File.System.Async.Test.Unit {
                     #expect(coopResults.count == 10)
                     #expect(dedicatedResults.count == 10)
                 }
-
-                // Both executors should have processed their work
-                #expect(cooperativeCount.load(ordering: .acquiring) == 10)
-                #expect(dedicatedCount.load(ordering: .acquiring) == 10)
 
                 await cooperativeExecutor.shutdown()
                 await dedicatedExecutor.shutdown()
