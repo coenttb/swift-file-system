@@ -182,6 +182,7 @@ extension File.IO {
     /// ## Lifecycle
     /// - Lazy start: workers spawn on first `run()` call
     /// - **Fail-pending shutdown**: queued jobs fail with `.shutdownInProgress`
+    /// - **The `.default` executor does not require shutdown** (process-scoped)
     ///
     /// ## Backpressure
     /// - Queue is bounded by `queueLimit` (ring buffer, O(1))
@@ -217,11 +218,48 @@ extension File.IO {
         // Handle store for stateful file handle management
         private let handleStore: HandleStore
 
+        // Whether this is the shared default executor (does not require shutdown)
+        private let isDefaultExecutor: Bool
+
+        // MARK: - Shared Default Executor
+
+        /// The shared default executor for common use cases.
+        ///
+        /// This executor is lazily initialized and process-scoped:
+        /// - Uses conservative default configuration
+        /// - Does **not** require `shutdown()` (calling it is a no-op)
+        /// - Suitable for the 80% case where you need simple async I/O
+        ///
+        /// For advanced use cases (dedicated threads, custom configuration,
+        /// explicit lifecycle management), create your own executor instance.
+        ///
+        /// ## Example
+        /// ```swift
+        /// for try await entry in File.Directory.Async(io: .default).entries(at: path) {
+        ///     print(entry.name)
+        /// }
+        /// ```
+        public static let `default` = Executor(default: .default)
+
+        // MARK: - Initializers
+
         /// Creates an executor with the given configuration.
+        ///
+        /// Executors created with this initializer **must** be shut down
+        /// when no longer needed using `shutdown()`.
         public init(_ configuration: Configuration = .init()) {
             self.configuration = configuration
             self.queue = _RingBuffer(capacity: min(configuration.queueLimit, 1024))
             self.handleStore = HandleStore()
+            self.isDefaultExecutor = false
+        }
+
+        /// Private initializer for the default executor.
+        private init(default configuration: Configuration) {
+            self.configuration = configuration
+            self.queue = _RingBuffer(capacity: min(configuration.queueLimit, 1024))
+            self.handleStore = HandleStore()
+            self.isDefaultExecutor = true
         }
 
         /// Execute a blocking operation on a worker thread.
@@ -313,7 +351,13 @@ extension File.IO {
         /// 4. Wait for in-flight jobs to complete
         /// 5. **Close all remaining handles** (best-effort, errors logged)
         /// 6. End workers
+        ///
+        /// - Note: Calling `shutdown()` on the `.default` executor is a no-op.
+        ///   The default executor is process-scoped and does not require shutdown.
         public func shutdown() async {
+            // Default executor is process-scoped - shutdown is a no-op
+            guard !isDefaultExecutor else { return }
+
             guard !isShutdown else { return }  // Idempotent
             isShutdown = true
 

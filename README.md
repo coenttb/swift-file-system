@@ -131,26 +131,23 @@ for entry in try File.Directory.Walk(at: rootPath) {
 ```swift
 import File_System_Async
 
-let io = File.IO.Executor()
-
-// Stream file bytes
-for try await byte in File.Stream.Async(io: io).bytes(from: path) {
+// Stream file bytes (using shared default executor)
+for try await byte in File.Stream.Async(io: .default).bytes(from: path) {
     process(byte)
 }
 
 // Async directory iteration (batched, 48x faster)
-for try await entry in File.Directory.Async(io: io).entries(at: directoryPath) {
+for try await entry in File.Directory.Async(io: .default).entries(at: directoryPath) {
     print(entry.name)
 }
 
 // Async file handle operations
-let handle = try await File.Handle.Async.open(path, mode: .readWrite, io: io)
+let handle = try await File.Handle.Async.open(path, mode: .readWrite, io: .default)
 let data = try await handle.read(upToCount: 1024)
 try await handle.write(contentsOf: newData)
 try await handle.close()
 
-// Graceful shutdown
-await io.shutdown()
+// Note: .default executor is process-scoped, no shutdown needed
 ```
 
 ## Usage Examples
@@ -205,10 +202,10 @@ try File.System.Copy.copy(
 )
 ```
 
-### Dedicated Thread Pool
+### Dedicated Thread Pool (Advanced)
 
 ```swift
-// Use dedicated threads to avoid starving Swift's cooperative pool
+// For heavy blocking I/O, use a dedicated executor instead of .default
 let io = File.IO.Executor(.init(
     workers: 4,
     threadModel: .dedicated  // Uses DispatchQueue per worker
@@ -220,6 +217,7 @@ try await io.run {
     Thread.sleep(forTimeInterval: 1.0)
 }
 
+// Explicit executors must be shut down when done
 await io.shutdown()
 ```
 
@@ -243,11 +241,9 @@ for entry in try File.Directory.Walk(at: rootPath, options: options) {
 ### Streaming Bytes with Chunk Size
 
 ```swift
-let io = File.IO.Executor()
-
 // Read in 64KB chunks
 let options = File.Stream.Async.BytesOptions(chunkSize: 64 * 1024)
-for try await chunk in File.Stream.Async(io: io).bytes(from: path, options: options) {
+for try await chunk in File.Stream.Async(io: .default).bytes(from: path, options: options) {
     processChunk(chunk)
 }
 ```

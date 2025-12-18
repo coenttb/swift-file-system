@@ -81,5 +81,17 @@ extension File.IO {
             self.queueLimit = max(1, queueLimit)
             self.threadModel = threadModel
         }
+
+        /// Default configuration for the shared executor.
+        ///
+        /// Conservative settings designed for the common case:
+        /// - Workers: half of available cores (minimum 2)
+        /// - Queue limit: 256 (bounded but reasonable)
+        /// - Thread model: cooperative (non-blocking for most I/O)
+        public static let `default` = Self(
+            workers: max(2, defaultWorkerCount / 2),
+            queueLimit: 256,
+            threadModel: .cooperative
+        )
     }
 }
