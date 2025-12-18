@@ -260,5 +260,72 @@ extension Test.`File System`.Unit {
             #expect(error.description.contains("Stat failed"))
             #expect(error.description.contains("Invalid argument"))
         }
+
+        // MARK: - lstatInfo() tests
+
+        @Test("lstatInfo returns symbolicLink type for symlink")
+        func lstatInfoReturnsSymlinkType() throws {
+            let targetPath = try createTempFile()
+            let linkPath = "/tmp/stat-lstat-test-\(UUID().uuidString)"
+            defer {
+                cleanup(targetPath)
+                cleanup(linkPath)
+            }
+
+            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
+
+            let filePath = try File.Path(linkPath)
+
+            // lstatInfo should return symbolicLink type (doesn't follow)
+            let lstatInfo = try File.System.Stat.lstatInfo(at: filePath)
+            #expect(lstatInfo.type == .symbolicLink)
+
+            // info should return regular type (follows symlink)
+            let statInfo = try File.System.Stat.info(at: filePath)
+            #expect(statInfo.type == .regular)
+        }
+
+        @Test("lstatInfo returns different inode than info for symlink")
+        func lstatInfoReturnsDifferentInodeForSymlink() throws {
+            let targetPath = try createTempFile()
+            let linkPath = "/tmp/stat-inode-test-\(UUID().uuidString)"
+            defer {
+                cleanup(targetPath)
+                cleanup(linkPath)
+            }
+
+            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
+
+            let filePath = try File.Path(linkPath)
+            let targetFilePath = try File.Path(targetPath)
+
+            // lstatInfo returns the symlink's own inode
+            let lstatInfo = try File.System.Stat.lstatInfo(at: filePath)
+
+            // info on symlink follows to target, should have same inode as target
+            let statInfo = try File.System.Stat.info(at: filePath)
+            let targetInfo = try File.System.Stat.info(at: targetFilePath)
+
+            // The symlink has its own inode, different from the target
+            #expect(lstatInfo.inode != targetInfo.inode)
+
+            // info() on symlink should return the target's inode
+            #expect(statInfo.inode == targetInfo.inode)
+        }
+
+        @Test("lstatInfo same as info for regular file")
+        func lstatInfoSameAsInfoForRegularFile() throws {
+            let path = try createTempFile()
+            defer { cleanup(path) }
+
+            let filePath = try File.Path(path)
+            let lstatInfo = try File.System.Stat.lstatInfo(at: filePath)
+            let statInfo = try File.System.Stat.info(at: filePath)
+
+            // For regular files, both should return the same info
+            #expect(lstatInfo.type == statInfo.type)
+            #expect(lstatInfo.inode == statInfo.inode)
+            #expect(lstatInfo.size == statInfo.size)
+        }
     }
 }
