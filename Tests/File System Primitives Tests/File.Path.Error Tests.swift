@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import File_System
+@testable import File_System_Primitives
 
 extension Test.`File System`.Unit {
     @Suite("File.Path.Error")

@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import File_System
+@testable import File_System_Primitives
 import SystemPackage
 
 extension Test.`File System`.Unit {

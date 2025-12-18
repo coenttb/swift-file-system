@@ -11,6 +11,7 @@ let package = Package(
         .watchOS(.v26),
     ],
     products: [
+        // Only File System is public; Primitives is internal
         .library(name: "File System", targets: ["File System"]),
     ],
     dependencies: [
@@ -21,7 +22,7 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "File System",
+            name: "File System Primitives",
             dependencies: [
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "Binary", package: "swift-standards"),
@@ -29,7 +30,21 @@ let package = Package(
                 .product(name: "INCITS 4 1986", package: "swift-incits-4-1986"),
                 .product(name: "RFC 4648", package: "swift-rfc-4648"),
             ],
+            path: "Sources/File System Primitives"
+        ),
+        .target(
+            name: "File System",
+            dependencies: [
+                "File System Primitives",
+            ],
             path: "Sources/File System"
+        ),
+        .testTarget(
+            name: "File System Primitives Tests",
+            dependencies: [
+                "File System Primitives",
+            ],
+            path: "Tests/File System Primitives Tests"
         ),
         .testTarget(
             name: "File System Tests",

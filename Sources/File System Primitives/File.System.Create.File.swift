@@ -15,9 +15,9 @@ extension File.System.Create {
 extension File.System.Create.File {
     /// Error type for file creation operations.
     public enum Error: Swift.Error, Equatable, Sendable {
-        case alreadyExists(File_System.File.Path)
-        case permissionDenied(File_System.File.Path)
-        case parentDirectoryNotFound(File_System.File.Path)
+        case alreadyExists(File_System_Primitives.File.Path)
+        case permissionDenied(File_System_Primitives.File.Path)
+        case parentDirectoryNotFound(File_System_Primitives.File.Path)
         case createFailed(errno: Int32, message: String)
     }
 }
