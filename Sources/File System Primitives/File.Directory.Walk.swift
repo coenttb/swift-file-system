@@ -77,17 +77,6 @@ extension File.Directory.Walk {
         return entries
     }
 
-    /// Recursively walks a directory and returns all entries.
-    ///
-    /// Async variant.
-    public static func walk(
-        at path: File.Path,
-        options: Options = Options()
-    ) async throws(Error) -> [File.Directory.Entry] {
-        var entries: [File.Directory.Entry] = []
-        try _walk(at: path, options: options, depth: 0, entries: &entries)
-        return entries
-    }
 }
 
 // MARK: - Implementation

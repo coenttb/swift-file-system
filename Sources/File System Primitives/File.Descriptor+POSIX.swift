@@ -66,7 +66,11 @@ extension File.Descriptor {
         // Default permissions for new files: 0644
         let defaultMode: mode_t = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 
+        #if canImport(Darwin)
         let fd = Darwin.open(path.string, flags, defaultMode)
+        #else
+        let fd = open(path.string, flags, defaultMode)
+        #endif
 
         guard fd >= 0 else {
             throw _mapErrno(errno, path: path)

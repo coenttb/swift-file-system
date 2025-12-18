@@ -60,7 +60,11 @@ extension File {
             }
             #else
             if _fd >= 0 {
+                #if canImport(Darwin)
                 _ = Darwin.close(_fd)
+                #else
+                _ = close(_fd)
+                #endif
             }
             #endif
         }
@@ -205,10 +209,15 @@ extension File.Descriptor {
             throw .alreadyClosed
         }
         let fd = _fd
-        _fd = -1
-        guard Darwin.close(fd) == 0 else {
+        #if canImport(Darwin)
+        let closeResult = Darwin.close(fd)
+        #else
+        let closeResult = close(fd)
+        #endif
+        guard closeResult == 0 else {
             throw .closeFailed(errno: errno, message: String(cString: strerror(errno)))
         }
+        _fd = -1  // Only invalidate after successful close
         #endif
     }
 

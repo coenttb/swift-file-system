@@ -69,11 +69,8 @@ extension File.System.Delete {
                 continue
             }
 
-            // Construct full path
-            let childPathString = path.string + "\\" + name
-            guard let childPath = try? File.Path(childPathString) else {
-                throw .deleteFailed(errno: 0, message: "Invalid child path: \(childPathString)")
-            }
+            // Construct full path using proper path composition
+            let childPath = path.appending(name)
 
             let isChildDir = (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0
 
@@ -82,7 +79,7 @@ extension File.System.Delete {
                 try _deleteDirectoryRecursive(at: childPath)
             } else {
                 // Delete file
-                let success = childPathString.withCString(encodedAs: UTF16.self) { wpath in
+                let success = childPath.string.withCString(encodedAs: UTF16.self) { wpath in
                     DeleteFileW(wpath)
                 }
                 guard success else {

@@ -48,16 +48,6 @@ extension File.Directory.Contents {
         #endif
     }
 
-    /// Lists the contents of a directory.
-    ///
-    /// Async variant.
-    public static func list(at path: File.Path) async throws(Error) -> [File.Directory.Entry] {
-        #if os(Windows)
-        return try _listWindows(at: path)
-        #else
-        return try _listPOSIX(at: path)
-        #endif
-    }
 }
 
 // MARK: - POSIX Implementation
@@ -91,11 +81,8 @@ extension File.Directory.Contents {
                 continue
             }
 
-            // Build full path
-            let entryPathString = path.string + "/" + name
-            guard let entryPath = try? File.Path(entryPathString) else {
-                continue
-            }
+            // Build full path using proper path composition
+            let entryPath = path.appending(name)
 
             // Determine type
             let entryType: File.Directory.EntryType
@@ -113,7 +100,7 @@ extension File.Directory.Contents {
             #else
             // Linux/Glibc - d_type may not be reliable, use stat
             var entryStat = stat()
-            if lstat(entryPathString, &entryStat) == 0 {
+            if lstat(entryPath.string, &entryStat) == 0 {
                 switch entryStat.st_mode & S_IFMT {
                 case S_IFREG:
                     entryType = .file
@@ -195,11 +182,8 @@ extension File.Directory.Contents {
                 continue
             }
 
-            // Build full path
-            let entryPathString = path.string + "\\" + name
-            guard let entryPath = try? File.Path(entryPathString) else {
-                continue
-            }
+            // Build full path using proper path composition
+            let entryPath = path.appending(name)
 
             // Determine type
             let entryType: File.Directory.EntryType

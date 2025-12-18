@@ -45,9 +45,9 @@ extension File.Descriptor {
             creationDisposition = TRUNCATE_EXISTING
         }
 
-        // Append mode
+        // Append mode - combine with existing access, don't clobber
         if options.contains(.append) {
-            desiredAccess = FILE_APPEND_DATA
+            desiredAccess |= FILE_APPEND_DATA
         }
 
         // No follow symlinks
@@ -71,6 +71,11 @@ extension File.Descriptor {
             throw _mapWindowsError(GetLastError(), path: path)
         }
 
+        // Close on exec - prevent handle inheritance
+        if options.contains(.closeOnExec) {
+            SetHandleInformation(handle, DWORD(HANDLE_FLAG_INHERIT), 0)
+        }
+
         return File.Descriptor(__unchecked: handle)
     }
 
@@ -87,8 +92,29 @@ extension File.Descriptor {
         case DWORD(ERROR_TOO_MANY_OPEN_FILES):
             return .tooManyOpenFiles
         default:
-            return .openFailed(errno: Int32(error), message: "Windows error \(error)")
+            return .openFailed(errno: Int32(error), message: _formatWindowsError(error))
         }
+    }
+
+    /// Formats a Windows error code into a human-readable message.
+    @usableFromInline
+    internal static func _formatWindowsError(_ errorCode: DWORD) -> String {
+        var buffer: LPWSTR? = nil
+        let length = FormatMessageW(
+            DWORD(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS),
+            nil,
+            errorCode,
+            0,
+            &buffer,
+            0,
+            nil
+        )
+        guard length > 0, let buffer = buffer else {
+            return "Windows error \(errorCode)"
+        }
+        defer { LocalFree(buffer) }
+        return String(decodingCString: buffer, as: UTF16.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

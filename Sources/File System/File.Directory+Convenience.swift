@@ -70,9 +70,9 @@ extension File.Directory {
 
     /// Returns the contents of the directory.
     ///
-    /// Async variant.
+    /// Async variant. Use `entries()` for true streaming iteration.
     public func contents() async throws -> [File.Directory.Entry] {
-        try await File.Directory.Contents.list(at: path)
+        try File.Directory.Contents.list(at: path)
     }
 
     /// Returns all files in the directory.

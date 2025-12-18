@@ -60,15 +60,12 @@ extension File.System.Delete {
                 continue
             }
 
-            // Construct full path
-            let childPathString = path.string + "/" + name
-            guard let childPath = try? File.Path(childPathString) else {
-                throw .deleteFailed(errno: 0, message: "Invalid child path: \(childPathString)")
-            }
+            // Construct full path using proper path composition
+            let childPath = path.appending(name)
 
             // Stat to determine type
             var childStat = stat()
-            guard stat(childPathString, &childStat) == 0 else {
+            guard stat(childPath.string, &childStat) == 0 else {
                 throw _mapErrno(errno, path: childPath)
             }
 
@@ -77,7 +74,7 @@ extension File.System.Delete {
                 try _deleteDirectoryRecursive(at: childPath)
             } else {
                 // Delete file
-                guard unlink(childPathString) == 0 else {
+                guard unlink(childPath.string) == 0 else {
                     throw _mapErrno(errno, path: childPath)
                 }
             }
