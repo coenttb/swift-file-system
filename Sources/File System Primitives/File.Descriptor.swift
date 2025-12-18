@@ -180,7 +180,7 @@ extension File.Descriptor {
     public static func open(
         _ path: File.Path,
         mode: Mode,
-        options: Options = []
+        options: Options = [.closeOnExec]
     ) throws(Error) -> File.Descriptor {
         #if os(Windows)
         return try _openWindows(path, mode: mode, options: options)

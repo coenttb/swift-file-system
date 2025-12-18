@@ -95,7 +95,7 @@ extension File.Handle {
     public static func open(
         _ path: File.Path,
         mode: Mode,
-        options: Options = []
+        options: Options = [.closeOnExec]
     ) throws(Error) -> File.Handle {
         let descriptorMode: File.Descriptor.Mode
         var descriptorOptions: File.Descriptor.Options = []
