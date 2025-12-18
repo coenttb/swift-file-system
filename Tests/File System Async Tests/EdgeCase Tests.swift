@@ -10,9 +10,6 @@ import Testing
 import Foundation
 
 extension File.System.Async.Test.EdgeCase {
-    @Suite("Edge Cases", .tags(.asyncEdgeCase))
-    struct EdgeCases {
-
         // MARK: - Test Fixtures
 
         private func createTempPath() -> String {
@@ -705,5 +702,5 @@ extension File.System.Async.Test.EdgeCase {
                 }
             }
         }
-    }
+    
 }
