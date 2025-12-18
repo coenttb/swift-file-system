@@ -45,7 +45,7 @@ enum WindowsAtomic {
         try writeAll(bytes, to: tempHandle)
 
         // 6. Flush to disk
-        try flushFile(tempHandle)
+        try flushFile(tempHandle, durability: options.durability)
 
         // 7. Copy metadata if requested
         if destExists, let srcHandle = destHandle {
@@ -269,14 +269,22 @@ extension WindowsAtomic {
         }
     }
 
-    /// Flushes file buffers to disk.
-    private static func flushFile(_ handle: HANDLE) throws(File.System.Write.Atomic.Error) {
-        if !FlushFileBuffers(handle) {
-            let err = GetLastError()
-            throw .syncFailed(
-                errno: Int32(err),
-                message: "FlushFileBuffers failed with error \(err)"
-            )
+    /// Flushes file buffers to disk based on durability mode.
+    private static func flushFile(_ handle: HANDLE, durability: File.System.Write.Atomic.Durability) throws(File.System.Write.Atomic.Error) {
+        switch durability {
+        case .full, .dataOnly:
+            // Windows FlushFileBuffers is equivalent to full sync
+            // (there's no separate metadata-only sync on Windows like fdatasync)
+            if !FlushFileBuffers(handle) {
+                let err = GetLastError()
+                throw .syncFailed(
+                    errno: Int32(err),
+                    message: "FlushFileBuffers failed with error \(err)"
+                )
+            }
+        case .none:
+            // No sync - fastest but no crash-safety guarantees
+            break
         }
     }
 

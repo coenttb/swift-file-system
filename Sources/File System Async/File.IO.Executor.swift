@@ -5,6 +5,8 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
+import Dispatch
+
 // MARK: - Executor Errors
 
 extension File.IO {
@@ -160,13 +162,22 @@ final class _CancellationBox: @unchecked Sendable {
 // MARK: - Executor
 
 extension File.IO {
-    /// A bounded cooperative pool for blocking I/O.
+    /// A bounded pool for blocking I/O with configurable thread model.
     ///
     /// ## Thread Model
+    /// The executor supports two thread models (configured via `Configuration.threadModel`):
+    ///
+    /// ### Cooperative (default)
     /// Uses Swift's cooperative thread pool via `Task.detached`. This means:
     /// - Blocking syscalls consume cooperative threads
     /// - Under sustained load, this can starve unrelated async work
     /// - `workers` bounds concurrency but does not provide dedicated threads
+    ///
+    /// ### Dedicated
+    /// Uses dedicated `DispatchQueue` instances with explicit QoS:
+    /// - Each worker has its own dispatch queue (user-initiated QoS)
+    /// - Blocking I/O does not interfere with Swift's cooperative pool
+    /// - Better isolation under sustained blocking operations
     ///
     /// ## Lifecycle
     /// - Lazy start: workers spawn on first `run()` call
@@ -199,6 +210,9 @@ extension File.IO {
         // Signal stream for workers (not polling)
         private var jobSignal: AsyncStream<Void>.Continuation?
         private var jobStream: AsyncStream<Void>?
+
+        // Dedicated dispatch queues (only used in .dedicated thread model)
+        private var dispatchQueues: [DispatchQueue] = []
 
         // Handle store for stateful file handle management
         private let handleStore: HandleStore
@@ -393,12 +407,32 @@ extension File.IO {
             self.jobStream = stream
             self.jobSignal = continuation
 
-            for _ in 0..<configuration.workers {
-                let task = Task.detached { [weak self] in
-                    guard let self else { return }
-                    await self.workerLoop()
+            switch configuration.threadModel {
+            case .cooperative:
+                // Current implementation: Task.detached uses cooperative thread pool
+                for _ in 0..<configuration.workers {
+                    let task = Task.detached { [weak self] in
+                        guard let self else { return }
+                        await self.workerLoop()
+                    }
+                    workerTasks.append(task)
                 }
-                workerTasks.append(task)
+
+            case .dedicated:
+                // Dedicated dispatch queues with explicit QoS
+                for i in 0..<configuration.workers {
+                    let queue = DispatchQueue(
+                        label: "file.io.worker.\(i)",
+                        qos: .userInitiated
+                    )
+                    dispatchQueues.append(queue)
+
+                    let task = Task.detached { [weak self] in
+                        guard let self else { return }
+                        await self.dedicatedWorkerLoop(queue: queue)
+                    }
+                    workerTasks.append(task)
+                }
             }
         }
 
@@ -411,6 +445,27 @@ extension File.IO {
 
                     // Execute OUTSIDE actor isolation
                     await executeJob(job)
+
+                    // Track completion for shutdown
+                    jobCompleted()
+                }
+            }
+        }
+
+        private func dedicatedWorkerLoop(queue: DispatchQueue) async {
+            guard let stream = jobStream else { return }
+
+            for await _ in stream {
+                while !Task.isCancelled {
+                    guard let job = dequeueJob() else { break }
+
+                    // Execute on dedicated dispatch queue
+                    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                        queue.async {
+                            job.run()
+                            continuation.resume()
+                        }
+                    }
 
                     // Track completion for shutdown
                     jobCompleted()

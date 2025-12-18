@@ -37,11 +37,38 @@ extension File.System.Write {
             case noClobber
         }
 
+        // MARK: - Durability
+
+        /// Controls the durability guarantees for file synchronization.
+        ///
+        /// Higher durability modes provide stronger crash-safety but slower performance.
+        public enum Durability: Sendable {
+            /// Full synchronization with F_FULLFSYNC on macOS (default).
+            ///
+            /// Guarantees data is written to physical storage and survives power loss.
+            /// Slowest but safest option.
+            case full
+
+            /// Data-only synchronization without metadata sync where available.
+            ///
+            /// Uses fdatasync() on Linux or F_BARRIERFSYNC on macOS if available.
+            /// Faster than `.full` but still durable for most use cases.
+            /// Falls back to fsync if platform-specific optimizations unavailable.
+            case dataOnly
+
+            /// No synchronization - data may be buffered in OS caches.
+            ///
+            /// Fastest option but provides no crash-safety guarantees.
+            /// Suitable for caches, temporary files, or build artifacts.
+            case none
+        }
+
         // MARK: - Options
 
         /// Options controlling atomic write behavior.
         public struct Options: Sendable {
             public var strategy: Strategy
+            public var durability: Durability
             public var preservePermissions: Bool
             public var preserveOwnership: Bool
             public var strictOwnership: Bool
@@ -51,6 +78,7 @@ extension File.System.Write {
 
             public init(
                 strategy: Strategy = .replaceExisting,
+                durability: Durability = .full,
                 preservePermissions: Bool = true,
                 preserveOwnership: Bool = false,
                 strictOwnership: Bool = false,
@@ -59,6 +87,7 @@ extension File.System.Write {
                 preserveACLs: Bool = false
             ) {
                 self.strategy = strategy
+                self.durability = durability
                 self.preservePermissions = preservePermissions
                 self.preserveOwnership = preserveOwnership
                 self.strictOwnership = strictOwnership

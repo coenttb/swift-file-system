@@ -129,6 +129,134 @@ extension File.System.Async.Test.Unit {
             #expect(config.workers >= 1)
             #expect(config.queueLimit >= 1)
         }
+
+        @Test("Configuration default thread model is cooperative")
+        func configurationDefaultThreadModel() {
+            let config = File.IO.Configuration()
+            #expect(config.threadModel == .cooperative)
+        }
+
+        @Test("Configuration custom thread model")
+        func configurationCustomThreadModel() {
+            let config = File.IO.Configuration(threadModel: .dedicated)
+            #expect(config.threadModel == .dedicated)
+        }
+
+        // MARK: - Thread Model Tests
+
+        @Test("Execute with cooperative thread model")
+        func executeWithCooperativeThreadModel() async throws {
+            let config = File.IO.Configuration(workers: 2, threadModel: .cooperative)
+            let executor = File.IO.Executor(config)
+
+            let results = try await withThrowingTaskGroup(of: Int.self) { group in
+                for i in 0..<10 {
+                    group.addTask {
+                        try await executor.run { i * 2 }
+                    }
+                }
+                var results: [Int] = []
+                for try await result in group {
+                    results.append(result)
+                }
+                return results.sorted()
+            }
+
+            #expect(results == [0, 2, 4, 6, 8, 10, 12, 14, 16, 18])
+            await executor.shutdown()
+        }
+
+        @Test("Execute with dedicated thread model")
+        func executeWithDedicatedThreadModel() async throws {
+            let config = File.IO.Configuration(workers: 2, threadModel: .dedicated)
+            let executor = File.IO.Executor(config)
+
+            let results = try await withThrowingTaskGroup(of: Int.self) { group in
+                for i in 0..<10 {
+                    group.addTask {
+                        try await executor.run { i * 2 }
+                    }
+                }
+                var results: [Int] = []
+                for try await result in group {
+                    results.append(result)
+                }
+                return results.sorted()
+            }
+
+            #expect(results == [0, 2, 4, 6, 8, 10, 12, 14, 16, 18])
+            await executor.shutdown()
+        }
+
+        @Test("Dedicated thread model handles blocking operations")
+        func dedicatedThreadModelBlockingOps() async throws {
+            let config = File.IO.Configuration(workers: 2, threadModel: .dedicated)
+            let executor = File.IO.Executor(config)
+
+            // Simulate blocking I/O operations
+            let results = try await withThrowingTaskGroup(of: Int.self) { group in
+                for i in 0..<5 {
+                    group.addTask {
+                        try await executor.run {
+                            // Simulate blocking I/O
+                            Thread.sleep(forTimeInterval: 0.01)
+                            return i
+                        }
+                    }
+                }
+                var results: [Int] = []
+                for try await result in group {
+                    results.append(result)
+                }
+                return results.sorted()
+            }
+
+            #expect(results == [0, 1, 2, 3, 4])
+            await executor.shutdown()
+        }
+
+        @Test("Both thread models produce equivalent results")
+        func threadModelEquivalence() async throws {
+            let cooperativeConfig = File.IO.Configuration(workers: 2, threadModel: .cooperative)
+            let dedicatedConfig = File.IO.Configuration(workers: 2, threadModel: .dedicated)
+
+            let cooperativeExecutor = File.IO.Executor(cooperativeConfig)
+            let dedicatedExecutor = File.IO.Executor(dedicatedConfig)
+
+            // Run same operations on both executors
+            async let cooperativeResults = withThrowingTaskGroup(of: Int.self) { group in
+                for i in 0..<10 {
+                    group.addTask {
+                        try await cooperativeExecutor.run { i * 3 }
+                    }
+                }
+                var results: [Int] = []
+                for try await result in group {
+                    results.append(result)
+                }
+                return results.sorted()
+            }
+
+            async let dedicatedResults = withThrowingTaskGroup(of: Int.self) { group in
+                for i in 0..<10 {
+                    group.addTask {
+                        try await dedicatedExecutor.run { i * 3 }
+                    }
+                }
+                var results: [Int] = []
+                for try await result in group {
+                    results.append(result)
+                }
+                return results.sorted()
+            }
+
+            let (coop, dedicated) = try await (cooperativeResults, dedicatedResults)
+            #expect(coop == dedicated)
+            #expect(coop == [0, 3, 6, 9, 12, 15, 18, 21, 24, 27])
+
+            await cooperativeExecutor.shutdown()
+            await dedicatedExecutor.shutdown()
+        }
     }
 }
 

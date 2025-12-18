@@ -144,25 +144,35 @@ extension File.Directory.Async.Entries {
                 return
 
             case .success(let box):
-                // Stream entries with 1-element backpressure
+                // Stream entries with batching to reduce executor overhead
                 do {
+                    let batchSize = 64
+
                     while true {
                         try Task.checkCancellation()
 
-                        // Read next entry via io.run (blocking operation)
-                        let entry = try await io.run {
-                            try box.next()
+                        // Read batch of entries via single io.run call
+                        let batch: [Element] = try await io.run {
+                            var entries: [Element] = []
+                            entries.reserveCapacity(batchSize)
+                            for _ in 0..<batchSize {
+                                guard let entry = try box.next() else { break }
+                                entries.append(entry)
+                            }
+                            return entries
                         }
 
-                        guard let entry else {
+                        if batch.isEmpty {
                             // End of directory
                             break
                         }
 
                         try Task.checkCancellation()
 
-                        // Send with backpressure - suspends until consumer pulls
-                        await channel.send(entry)
+                        // Send batch entries with backpressure
+                        for entry in batch {
+                            await channel.send(entry)
+                        }
                     }
 
                     // Clean close

@@ -54,7 +54,7 @@ enum POSIXAtomic {
         try writeAll(bytes, to: fd)
 
         // 6. Sync file to disk
-        try syncFile(fd)
+        try syncFile(fd, durability: options.durability)
 
         // 7. Apply metadata from destination if requested
         if let st = destStat {
@@ -283,23 +283,65 @@ extension POSIXAtomic {
         }
     }
 
-    /// Syncs file data to disk.
-    private static func syncFile(_ fd: Int32) throws(File.System.Write.Atomic.Error) {
-        #if canImport(Darwin)
-        // On macOS, use F_FULLFSYNC for true durability
-        if fcntl(fd, F_FULLFSYNC) != 0 {
-            // Fall back to fsync if F_FULLFSYNC fails
+    /// Syncs file data to disk based on durability mode.
+    private static func syncFile(_ fd: Int32, durability: File.System.Write.Atomic.Durability) throws(File.System.Write.Atomic.Error) {
+        switch durability {
+        case .full:
+            // Full durability: F_FULLFSYNC on macOS, fsync elsewhere
+            #if canImport(Darwin)
+            // On macOS, use F_FULLFSYNC for true durability
+            if fcntl(fd, F_FULLFSYNC) != 0 {
+                // Fall back to fsync if F_FULLFSYNC fails
+                if fsync(fd) != 0 {
+                    let e = errno
+                    throw .syncFailed(errno: e, message: File.System.Write.Atomic.errorMessage(for: e))
+                }
+            }
+            #else
             if fsync(fd) != 0 {
                 let e = errno
                 throw .syncFailed(errno: e, message: File.System.Write.Atomic.errorMessage(for: e))
             }
+            #endif
+
+        case .dataOnly:
+            // Data-only sync: fdatasync on Linux, F_BARRIERFSYNC on macOS, fallback to fsync
+            #if canImport(Darwin)
+            // Try F_BARRIERFSYNC first (faster than F_FULLFSYNC)
+            #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
+            if fcntl(fd, F_BARRIERFSYNC) != 0 {
+                // Fall back to fsync if F_BARRIERFSYNC fails
+                if fsync(fd) != 0 {
+                    let e = errno
+                    throw .syncFailed(errno: e, message: File.System.Write.Atomic.errorMessage(for: e))
+                }
+            }
+            #else
+            // Darwin platform without F_BARRIERFSYNC, use fsync
+            if fsync(fd) != 0 {
+                let e = errno
+                throw .syncFailed(errno: e, message: File.System.Write.Atomic.errorMessage(for: e))
+            }
+            #endif
+            #elseif os(Linux)
+            // Use fdatasync on Linux (syncs data but not all metadata)
+            if fdatasync(fd) != 0 {
+                let e = errno
+                throw .syncFailed(errno: e, message: File.System.Write.Atomic.errorMessage(for: e))
+            }
+            #else
+            // Fallback to fsync for other platforms
+            if fsync(fd) != 0 {
+                let e = errno
+                throw .syncFailed(errno: e, message: File.System.Write.Atomic.errorMessage(for: e))
+            }
+            #endif
+
+        case .none:
+            // No sync - fastest but no crash-safety guarantees
+            // Data may remain in OS buffers and be lost on power failure
+            break
         }
-        #else
-        if fsync(fd) != 0 {
-            let e = errno
-            throw .syncFailed(errno: e, message: File.System.Write.Atomic.errorMessage(for: e))
-        }
-        #endif
     }
 
     /// Closes a file descriptor.

@@ -244,8 +244,10 @@ extension File.Directory.Async.WalkSequence {
                 }
             }
 
-            // Iterate directory
+            // Iterate directory with batching to reduce executor overhead
             do {
+                let batchSize = 64
+
                 while true {
                     // Check cancellation
                     if Task.isCancelled {
@@ -257,31 +259,42 @@ extension File.Directory.Async.WalkSequence {
                         break
                     }
 
-                    // Read next entry
-                    let entry = try await io.run { try box.next() }
+                    // Read batch of entries via single io.run call
+                    let batch: [File.Directory.Entry] = try await io.run {
+                        var entries: [File.Directory.Entry] = []
+                        entries.reserveCapacity(batchSize)
+                        for _ in 0..<batchSize {
+                            guard let entry = try box.next() else { break }
+                            entries.append(entry)
+                        }
+                        return entries
+                    }
 
-                    guard let entry else { break }
+                    guard !batch.isEmpty else { break }
 
-                    // Send path to consumer
-                    await channel.send(entry.path)
+                    // Process batch entries
+                    for entry in batch {
+                        // Send path to consumer
+                        await channel.send(entry.path)
 
-                    // Check if we should recurse
-                    let shouldRecurse: Bool
-                    if entry.type == .directory {
-                        shouldRecurse = true
-                    } else if options.followSymlinks && entry.type == .symbolicLink {
-                        // Get inode for cycle detection
-                        if let inode = await getInode(entry.path, io: io) {
-                            shouldRecurse = await state.markVisited(inode)
+                        // Check if we should recurse
+                        let shouldRecurse: Bool
+                        if entry.type == .directory {
+                            shouldRecurse = true
+                        } else if options.followSymlinks && entry.type == .symbolicLink {
+                            // Get inode for cycle detection
+                            if let inode = await getInode(entry.path, io: io) {
+                                shouldRecurse = await state.markVisited(inode)
+                            } else {
+                                shouldRecurse = false
+                            }
                         } else {
                             shouldRecurse = false
                         }
-                    } else {
-                        shouldRecurse = false
-                    }
 
-                    if shouldRecurse {
-                        await state.enqueue(entry.path)
+                        if shouldRecurse {
+                            await state.enqueue(entry.path)
+                        }
                     }
                 }
             } catch {
