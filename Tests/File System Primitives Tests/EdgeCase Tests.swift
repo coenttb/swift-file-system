@@ -550,6 +550,14 @@ extension File.System.Test.EdgeCase {
     #if !os(Windows)
         @Test("Open file without read permission fails")
         func openWithoutReadPermission() throws {
+            // Skip when running as root - root bypasses permission checks
+            #if canImport(Glibc)
+                if geteuid() == 0 {
+                    // Running as root, permission test is not meaningful
+                    return
+                }
+            #endif
+
             let path = createTempPath()
             defer { cleanup(path) }
 

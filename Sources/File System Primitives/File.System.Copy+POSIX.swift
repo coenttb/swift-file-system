@@ -20,14 +20,14 @@
         ///
         /// ## Fallback Ladder
         /// - **Darwin**: copyfile(CLONE_FORCE) → copyfile(ALL/DATA) → manual loop
-        /// - **Linux**: copy_file_range → sendfile → manual loop
+        /// - **Linux**: sendfile → manual loop
         /// - **Other POSIX**: manual loop only
         internal static func _copyPOSIX(
             from source: File.Path,
             to destination: File.Path,
             options: Options
         ) throws(Error) {
-            // Stat source
+            // Stat source (lstat when not following symlinks)
             var sourceStat = stat()
             let statResult: Int32
             if options.followSymlinks {
@@ -45,9 +45,12 @@
                 throw .isDirectory(source)
             }
 
-            // Check if destination exists
+            // Check if source is a symlink and we're not following
+            let sourceIsSymlink = (sourceStat.st_mode & S_IFMT) == S_IFLNK
+
+            // Check if destination exists (use lstat to detect symlinks)
             var destStat = stat()
-            let destExists = stat(destination.string, &destStat) == 0
+            let destExists = lstat(destination.string, &destStat) == 0
 
             if destExists {
                 if !options.overwrite {
@@ -57,6 +60,15 @@
                 if (destStat.st_mode & S_IFMT) == S_IFDIR {
                     throw .isDirectory(destination)
                 }
+                // Unlink destination before copy to replace directory entry
+                // This is critical: without this, writing to a symlink writes through to target
+                _ = unlink(destination.string)
+            }
+
+            // Handle symlink copying when followSymlinks=false
+            if !options.followSymlinks && sourceIsSymlink {
+                try _copySymlink(from: source, to: destination)
+                return
             }
 
             // Darwin: try kernel-assisted copy first (before opening fds)
@@ -198,6 +210,31 @@
 
                     written += w
                 }
+            }
+        }
+
+        // MARK: - Symlink Copy
+
+        /// Copies a symlink by reading its target and creating a new symlink.
+        ///
+        /// This is used when `followSymlinks=false` and the source is a symlink.
+        /// We replicate the link itself rather than copying the target's contents.
+        private static func _copySymlink(
+            from source: File.Path,
+            to destination: File.Path
+        ) throws(Error) {
+            // Read the symlink target
+            var buffer = [CChar](repeating: 0, count: Int(PATH_MAX) + 1)
+            let len = readlink(source.string, &buffer, buffer.count - 1)
+            guard len >= 0 else {
+                throw _mapErrno(errno, source: source, destination: destination)
+            }
+            // Create symlink at destination - convert CChar to UInt8 for String decoding
+            let target = buffer.prefix(len).withUnsafeBufferPointer { ptr in
+                String(decoding: UnsafeRawBufferPointer(ptr), as: UTF8.self)
+            }
+            guard symlink(target, destination.string) == 0 else {
+                throw _mapErrno(errno, source: source, destination: destination)
             }
         }
 
