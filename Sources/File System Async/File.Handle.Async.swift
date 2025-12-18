@@ -74,7 +74,12 @@ extension File.Handle {
         }
 
         /// Internal initializer for when handle is already registered.
-        internal init(id: File.IO.HandleID, path: File.Path, mode: File.Handle.Mode, io: File.IO.Executor) {
+        internal init(
+            id: File.IO.HandleID,
+            path: File.Path,
+            mode: File.Handle.Mode,
+            io: File.IO.Executor
+        ) {
             self.id = id
             self.path = path
             self.mode = mode
@@ -84,7 +89,9 @@ extension File.Handle {
         deinit {
             if !isClosed {
                 #if DEBUG
-                print("Warning: File.Handle.Async deallocated without close() for path: \(path)")
+                    print(
+                        "Warning: File.Handle.Async deallocated without close() for path: \(path)"
+                    )
                 #endif
                 // Best-effort cleanup - fire and forget
                 // May be skipped during shutdown; errors discarded
@@ -179,7 +186,10 @@ extension File.Handle {
         ///   - origin: The origin for the seek.
         /// - Returns: The new position.
         @discardableResult
-        public func seek(to offset: Int64, from origin: File.Handle.SeekOrigin = .start) async throws -> Int64 {
+        public func seek(
+            to offset: Int64,
+            from origin: File.Handle.SeekOrigin = .start
+        ) async throws -> Int64 {
             guard !isClosed else {
                 throw File.Handle.Error.invalidHandle
             }

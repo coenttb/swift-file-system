@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.Handle")
@@ -150,7 +151,7 @@ extension File.System.Test.Unit {
             let filePath = try File.Path(path)
             var handle = try File.Handle.open(filePath, mode: .read)
 
-            _ = try handle.read(count: 3) // Read all
+            _ = try handle.read(count: 3)  // Read all
             let atEOF = try handle.read(count: 10)
             #expect(atEOF.isEmpty)
             try handle.close()
@@ -238,8 +239,8 @@ extension File.System.Test.Unit {
             let filePath = try File.Path(path)
             var handle = try File.Handle.open(filePath, mode: .read)
 
-            _ = try handle.read(count: 3) // Position at 3
-            let newPos = try handle.seek(to: 2, from: .current) // Now at 5
+            _ = try handle.read(count: 3)  // Position at 3
+            let newPos = try handle.seek(to: 2, from: .current)  // Now at 5
             #expect(newPos == 5)
 
             let readData = try handle.read(count: 1)
@@ -307,14 +308,14 @@ extension File.System.Test.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/missing")
+            let path = try File.Path("/tmp/missing")
             let error = File.Handle.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/secret")
+            let path = try File.Path("/root/secret")
             let error = File.Handle.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }

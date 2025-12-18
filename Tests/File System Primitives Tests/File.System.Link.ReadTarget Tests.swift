@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Link.ReadTarget")
@@ -43,7 +44,10 @@ extension File.System.Test.Unit {
                 cleanup(linkPath)
             }
 
-            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
+            try FileManager.default.createSymbolicLink(
+                atPath: linkPath,
+                withDestinationPath: targetPath
+            )
 
             let link = try File.Path(linkPath)
             let target = try File.System.Link.ReadTarget.target(of: link)
@@ -60,7 +64,10 @@ extension File.System.Test.Unit {
                 cleanup(linkPath)
             }
 
-            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
+            try FileManager.default.createSymbolicLink(
+                atPath: linkPath,
+                withDestinationPath: targetPath
+            )
 
             let link = try File.Path(linkPath)
             let target = try File.System.Link.ReadTarget.target(of: link)
@@ -76,7 +83,10 @@ extension File.System.Test.Unit {
                 cleanup(linkPath)
             }
 
-            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
+            try FileManager.default.createSymbolicLink(
+                atPath: linkPath,
+                withDestinationPath: targetPath
+            )
 
             let link = try File.Path(linkPath)
             let target = try File.System.Link.ReadTarget.target(of: link)
@@ -97,7 +107,10 @@ extension File.System.Test.Unit {
             FileManager.default.createFile(atPath: targetPath, contents: nil)
 
             // Create relative symlink
-            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: "target.txt")
+            try FileManager.default.createSymbolicLink(
+                atPath: linkPath,
+                withDestinationPath: "target.txt"
+            )
 
             let link = try File.Path(linkPath)
             let target = try File.System.Link.ReadTarget.target(of: link)
@@ -145,21 +158,21 @@ extension File.System.Test.Unit {
 
         @Test("notASymlink error description")
         func notASymlinkErrorDescription() throws {
-            let path = try File.Path.init("/tmp/regular")
+            let path = try File.Path("/tmp/regular")
             let error = File.System.Link.ReadTarget.Error.notASymlink(path)
             #expect(error.description.contains("Not a symbolic link"))
         }
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/missing")
+            let path = try File.Path("/tmp/missing")
             let error = File.System.Link.ReadTarget.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/secret")
+            let path = try File.Path("/root/secret")
             let error = File.System.Link.ReadTarget.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
@@ -175,11 +188,17 @@ extension File.System.Test.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path.init("/tmp/a")
-            let path2 = try File.Path.init("/tmp/a")
+            let path1 = try File.Path("/tmp/a")
+            let path2 = try File.Path("/tmp/a")
 
-            #expect(File.System.Link.ReadTarget.Error.notASymlink(path1) == File.System.Link.ReadTarget.Error.notASymlink(path2))
-            #expect(File.System.Link.ReadTarget.Error.pathNotFound(path1) == File.System.Link.ReadTarget.Error.pathNotFound(path2))
+            #expect(
+                File.System.Link.ReadTarget.Error.notASymlink(path1)
+                    == File.System.Link.ReadTarget.Error.notASymlink(path2)
+            )
+            #expect(
+                File.System.Link.ReadTarget.Error.pathNotFound(path1)
+                    == File.System.Link.ReadTarget.Error.pathNotFound(path2)
+            )
         }
     }
 }

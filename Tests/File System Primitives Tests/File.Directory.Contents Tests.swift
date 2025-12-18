@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.Directory.Contents")
@@ -61,8 +62,14 @@ extension File.System.Test.Unit {
             defer { cleanup(dirPath) }
 
             // Create subdirectories
-            try FileManager.default.createDirectory(atPath: "\(dirPath)/subdir1", withIntermediateDirectories: true)
-            try FileManager.default.createDirectory(atPath: "\(dirPath)/subdir2", withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(
+                atPath: "\(dirPath)/subdir1",
+                withIntermediateDirectories: true
+            )
+            try FileManager.default.createDirectory(
+                atPath: "\(dirPath)/subdir2",
+                withIntermediateDirectories: true
+            )
 
             let path = try File.Path(dirPath)
             let entries = try File.Directory.Contents.list(at: path)
@@ -82,7 +89,10 @@ extension File.System.Test.Unit {
             FileManager.default.createFile(atPath: "\(dirPath)/file.txt", contents: nil)
 
             // Create subdirectory
-            try FileManager.default.createDirectory(atPath: "\(dirPath)/subdir", withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(
+                atPath: "\(dirPath)/subdir",
+                withIntermediateDirectories: true
+            )
 
             let path = try File.Path(dirPath)
             let entries = try File.Directory.Contents.list(at: path)
@@ -119,7 +129,10 @@ extension File.System.Test.Unit {
             FileManager.default.createFile(atPath: "\(dirPath)/target.txt", contents: nil)
 
             // Create a symlink
-            try FileManager.default.createSymbolicLink(atPath: "\(dirPath)/link.txt", withDestinationPath: "\(dirPath)/target.txt")
+            try FileManager.default.createSymbolicLink(
+                atPath: "\(dirPath)/link.txt",
+                withDestinationPath: "\(dirPath)/target.txt"
+            )
 
             let path = try File.Path(dirPath)
             let entries = try File.Directory.Contents.list(at: path)
@@ -177,21 +190,21 @@ extension File.System.Test.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/missing")
+            let path = try File.Path("/tmp/missing")
             let error = File.Directory.Contents.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root")
+            let path = try File.Path("/root")
             let error = File.Directory.Contents.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("notADirectory error description")
         func notADirectoryErrorDescription() throws {
-            let path = try File.Path.init("/tmp/file.txt")
+            let path = try File.Path("/tmp/file.txt")
             let error = File.Directory.Contents.Error.notADirectory(path)
             #expect(error.description.contains("Not a directory"))
         }

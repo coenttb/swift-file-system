@@ -255,7 +255,8 @@ extension File.IO {
                 let waiterBox = _WaiterBox()
 
                 await withTaskCancellationHandler {
-                    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                    await withCheckedContinuation {
+                        (continuation: CheckedContinuation<Void, Never>) in
                         let waiterState = _WaiterState(continuation)
                         waiterBox.state = waiterState
                         capacityWaiters[ObjectIdentifier(waiterState)] = waiterState
@@ -284,7 +285,8 @@ extension File.IO {
             // Enqueue and wait for result
             // Note: Once enqueued, job completes regardless of caller cancellation
             let result = try await withTaskCancellationHandler {
-                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, any Error>) in
+                try await withCheckedThrowingContinuation {
+                    (continuation: CheckedContinuation<T, any Error>) in
                     let job = _JobBox(operation: operation, continuation: continuation)
                     queue.enqueue(job)
                     // Signal workers that a job is available
@@ -460,7 +462,8 @@ extension File.IO {
                     guard let job = dequeueJob() else { break }
 
                     // Execute on dedicated dispatch queue
-                    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                    await withCheckedContinuation {
+                        (continuation: CheckedContinuation<Void, Never>) in
                         queue.async {
                             job.run()
                             continuation.resume()

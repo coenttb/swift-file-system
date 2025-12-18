@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Write.Append")
@@ -113,7 +114,10 @@ extension File.System.Test.Unit {
         @Test("Append to directory throws isDirectory")
         func appendToDirectoryThrows() throws {
             let dirPath = "/tmp/append-dir-\(UUID().uuidString)"
-            try FileManager.default.createDirectory(atPath: dirPath, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(
+                atPath: dirPath,
+                withIntermediateDirectories: true
+            )
             defer { cleanup(dirPath) }
 
             let path = try File.Path(dirPath)
@@ -131,28 +135,31 @@ extension File.System.Test.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/missing/nested/file.txt")
+            let path = try File.Path("/tmp/missing/nested/file.txt")
             let error = File.System.Write.Append.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/secret.txt")
+            let path = try File.Path("/root/secret.txt")
             let error = File.System.Write.Append.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("isDirectory error description")
         func isDirectoryErrorDescription() throws {
-            let path = try File.Path.init("/tmp")
+            let path = try File.Path("/tmp")
             let error = File.System.Write.Append.Error.isDirectory(path)
             #expect(error.description.contains("Is a directory"))
         }
 
         @Test("writeFailed error description")
         func writeFailedErrorDescription() {
-            let error = File.System.Write.Append.Error.writeFailed(errno: 28, message: "No space left")
+            let error = File.System.Write.Append.Error.writeFailed(
+                errno: 28,
+                message: "No space left"
+            )
             #expect(error.description.contains("Write failed"))
             #expect(error.description.contains("No space left"))
         }
@@ -161,11 +168,17 @@ extension File.System.Test.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path.init("/tmp/a")
-            let path2 = try File.Path.init("/tmp/a")
+            let path1 = try File.Path("/tmp/a")
+            let path2 = try File.Path("/tmp/a")
 
-            #expect(File.System.Write.Append.Error.pathNotFound(path1) == File.System.Write.Append.Error.pathNotFound(path2))
-            #expect(File.System.Write.Append.Error.isDirectory(path1) == File.System.Write.Append.Error.isDirectory(path2))
+            #expect(
+                File.System.Write.Append.Error.pathNotFound(path1)
+                    == File.System.Write.Append.Error.pathNotFound(path2)
+            )
+            #expect(
+                File.System.Write.Append.Error.isDirectory(path1)
+                    == File.System.Write.Append.Error.isDirectory(path2)
+            )
         }
     }
 }

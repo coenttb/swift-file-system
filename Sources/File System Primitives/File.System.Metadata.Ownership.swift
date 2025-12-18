@@ -6,13 +6,13 @@
 //
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File.System.Metadata {
@@ -52,14 +52,14 @@ extension File.System.Metadata.Ownership {
     /// - Throws: `File.System.Metadata.Ownership.Error` on failure.
     public static func get(at path: File.Path) throws(Error) -> Self {
         #if os(Windows)
-        // Windows doesn't expose uid/gid
-        return Self(uid: 0, gid: 0)
+            // Windows doesn't expose uid/gid
+            return Self(uid: 0, gid: 0)
         #else
-        var statBuf = stat()
-        guard stat(path.string, &statBuf) == 0 else {
-            throw _mapErrno(errno, path: path)
-        }
-        return Self(uid: statBuf.st_uid, gid: statBuf.st_gid)
+            var statBuf = stat()
+            guard stat(path.string, &statBuf) == 0 else {
+                throw _mapErrno(errno, path: path)
+            }
+            return Self(uid: statBuf.st_uid, gid: statBuf.st_gid)
         #endif
     }
 
@@ -73,32 +73,32 @@ extension File.System.Metadata.Ownership {
     /// - Throws: `File.System.Metadata.Ownership.Error` on failure.
     public static func set(_ ownership: Self, at path: File.Path) throws(Error) {
         #if os(Windows)
-        // Windows doesn't support chown - this is a no-op
-        return
+            // Windows doesn't support chown - this is a no-op
+            return
         #else
-        guard chown(path.string, ownership.uid, ownership.gid) == 0 else {
-            throw _mapErrno(errno, path: path)
-        }
+            guard chown(path.string, ownership.uid, ownership.gid) == 0 else {
+                throw _mapErrno(errno, path: path)
+            }
         #endif
     }
 
     #if !os(Windows)
-    private static func _mapErrno(_ errno: Int32, path: File.Path) -> Error {
-        switch errno {
-        case ENOENT:
-            return .pathNotFound(path)
-        case EACCES, EPERM:
-            return .permissionDenied(path)
-        default:
-            let message: String
-            if let cString = strerror(errno) {
-                message = String(cString: cString)
-            } else {
-                message = "Unknown error"
+        private static func _mapErrno(_ errno: Int32, path: File.Path) -> Error {
+            switch errno {
+            case ENOENT:
+                return .pathNotFound(path)
+            case EACCES, EPERM:
+                return .permissionDenied(path)
+            default:
+                let message: String
+                if let cString = strerror(errno) {
+                    message = String(cString: cString)
+                } else {
+                    message = "Unknown error"
+                }
+                return .operationFailed(errno: errno, message: message)
             }
-            return .operationFailed(errno: errno, message: message)
         }
-    }
     #endif
 }
 

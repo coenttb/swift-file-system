@@ -6,13 +6,13 @@
 //
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File.System {
@@ -41,9 +41,9 @@ extension File.System.Stat {
     /// - Throws: `File.System.Stat.Error` on failure.
     public static func info(at path: File.Path) throws(Error) -> File.System.Metadata.Info {
         #if os(Windows)
-        return try _infoWindows(at: path)
+            return try _infoWindows(at: path)
         #else
-        return try _infoPOSIX(at: path)
+            return try _infoPOSIX(at: path)
         #endif
     }
 
@@ -57,10 +57,10 @@ extension File.System.Stat {
     /// - Throws: `File.System.Stat.Error` on failure.
     public static func lstatInfo(at path: File.Path) throws(Error) -> File.System.Metadata.Info {
         #if os(Windows)
-        // Windows: GetFileAttributesEx doesn't follow symlinks by default
-        return try _infoWindows(at: path)
+            // Windows: GetFileAttributesEx doesn't follow symlinks by default
+            return try _infoWindows(at: path)
         #else
-        return try _lstatInfoPOSIX(at: path)
+            return try _lstatInfoPOSIX(at: path)
         #endif
     }
 
@@ -70,9 +70,9 @@ extension File.System.Stat {
     /// - Returns: `true` if the path exists, `false` otherwise.
     public static func exists(at path: File.Path) -> Bool {
         #if os(Windows)
-        return _existsWindows(at: path)
+            return _existsWindows(at: path)
         #else
-        return _existsPOSIX(at: path)
+            return _existsPOSIX(at: path)
         #endif
     }
 
@@ -100,9 +100,9 @@ extension File.System.Stat {
     /// - Returns: `true` if the path is a symbolic link, `false` otherwise.
     public static func isSymlink(at path: File.Path) -> Bool {
         #if os(Windows)
-        return _isSymlinkWindows(at: path)
+            return _isSymlinkWindows(at: path)
         #else
-        return _isSymlinkPOSIX(at: path)
+            return _isSymlinkPOSIX(at: path)
         #endif
     }
 }

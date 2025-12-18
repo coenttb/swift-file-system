@@ -7,6 +7,6 @@
 
 extension File {
     public enum System {
-        
+
     }
 }

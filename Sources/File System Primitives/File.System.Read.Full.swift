@@ -6,13 +6,13 @@
 //
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File.System.Read {
@@ -45,9 +45,9 @@ extension File.System.Read.Full {
     /// - Throws: `File.System.Read.Full.Error` on failure.
     public static func read(from path: File.Path) throws(Error) -> [UInt8] {
         #if os(Windows)
-        return try _readWindows(from: path)
+            return try _readWindows(from: path)
         #else
-        return try _readPOSIX(from: path)
+            return try _readPOSIX(from: path)
         #endif
     }
 

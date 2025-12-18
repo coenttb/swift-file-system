@@ -5,10 +5,11 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
-@_spi(Internal) import StandardTime
 import Foundation
+@_spi(Internal) import StandardTime
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Metadata.Timestamps")
@@ -30,7 +31,7 @@ extension File.System.Test.Unit {
 
         @Test("Timestamps initialization")
         func timestampsInitialization() {
-            let now = Time(__unchecked: (), secondsSinceEpoch: 1702900000, nanoseconds: 0)
+            let now = Time(__unchecked: (), secondsSinceEpoch: 1_702_900_000, nanoseconds: 0)
             let timestamps = File.System.Metadata.Timestamps(
                 accessTime: now,
                 modificationTime: now,
@@ -46,7 +47,7 @@ extension File.System.Test.Unit {
 
         @Test("Timestamps initialization without creationTime")
         func timestampsInitializationWithoutCreationTime() {
-            let now = Time(__unchecked: (), secondsSinceEpoch: 1702900000, nanoseconds: 0)
+            let now = Time(__unchecked: (), secondsSinceEpoch: 1_702_900_000, nanoseconds: 0)
             let timestamps = File.System.Metadata.Timestamps(
                 accessTime: now,
                 modificationTime: now,
@@ -85,7 +86,10 @@ extension File.System.Test.Unit {
 
             let afterWrite = try File.System.Metadata.Timestamps.get(at: filePath)
 
-            #expect(afterWrite.modificationTime.secondsSinceEpoch >= beforeWrite.modificationTime.secondsSinceEpoch)
+            #expect(
+                afterWrite.modificationTime.secondsSinceEpoch
+                    >= beforeWrite.modificationTime.secondsSinceEpoch
+            )
         }
 
         // MARK: - Set Timestamps
@@ -98,7 +102,7 @@ extension File.System.Test.Unit {
             let filePath = try File.Path(path)
 
             // Set to a specific time (Jan 1, 2020 00:00:00 UTC)
-            let targetTime = Time(__unchecked: (), secondsSinceEpoch: 1577836800, nanoseconds: 0)
+            let targetTime = Time(__unchecked: (), secondsSinceEpoch: 1_577_836_800, nanoseconds: 0)
             let timestamps = File.System.Metadata.Timestamps(
                 accessTime: targetTime,
                 modificationTime: targetTime,
@@ -119,8 +123,8 @@ extension File.System.Test.Unit {
 
             let filePath = try File.Path(path)
 
-            let accessTime = Time(__unchecked: (), secondsSinceEpoch: 1577836800, nanoseconds: 0) // Jan 1, 2020
-            let modTime = Time(__unchecked: (), secondsSinceEpoch: 1609459200, nanoseconds: 0)    // Jan 1, 2021
+            let accessTime = Time(__unchecked: (), secondsSinceEpoch: 1_577_836_800, nanoseconds: 0)  // Jan 1, 2020
+            let modTime = Time(__unchecked: (), secondsSinceEpoch: 1_609_459_200, nanoseconds: 0)  // Jan 1, 2021
 
             let timestamps = File.System.Metadata.Timestamps(
                 accessTime: accessTime,
@@ -152,7 +156,7 @@ extension File.System.Test.Unit {
             let nonExistent = "/tmp/non-existent-\(UUID().uuidString)"
             let path = try File.Path(nonExistent)
 
-            let testTime = Time(__unchecked: (), secondsSinceEpoch: 1702900000, nanoseconds: 0)
+            let testTime = Time(__unchecked: (), secondsSinceEpoch: 1_702_900_000, nanoseconds: 0)
             let timestamps = File.System.Metadata.Timestamps(
                 accessTime: testTime,
                 modificationTime: testTime,
@@ -168,21 +172,24 @@ extension File.System.Test.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/missing")
+            let path = try File.Path("/tmp/missing")
             let error = File.System.Metadata.Timestamps.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/secret")
+            let path = try File.Path("/root/secret")
             let error = File.System.Metadata.Timestamps.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("operationFailed error description")
         func operationFailedErrorDescription() {
-            let error = File.System.Metadata.Timestamps.Error.operationFailed(errno: 22, message: "Invalid argument")
+            let error = File.System.Metadata.Timestamps.Error.operationFailed(
+                errno: 22,
+                message: "Invalid argument"
+            )
             #expect(error.description.contains("Operation failed"))
         }
 

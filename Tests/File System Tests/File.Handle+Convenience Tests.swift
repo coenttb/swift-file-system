@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System
 import Foundation
+import Testing
+
+@testable import File_System
 
 extension File.System.Test.Unit {
     @Suite("File.Handle+Convenience")
@@ -122,7 +123,7 @@ extension File.System.Test.Unit {
                 return bytes.reduce(0, +)
             }
 
-            #expect(sum == 55) // 1+2+3+4+5+6+7+8+9+10
+            #expect(sum == 55)  // 1+2+3+4+5+6+7+8+9+10
         }
 
         @Test("withOpen with create option creates file")
@@ -134,7 +135,7 @@ extension File.System.Test.Unit {
             #expect(!FileManager.default.fileExists(atPath: path))
 
             try File.Handle.withOpen(filePath, mode: .write, options: [.create]) { handle in
-                let bytes: [UInt8] = [72, 105] // "Hi"
+                let bytes: [UInt8] = [72, 105]  // "Hi"
                 try bytes.withUnsafeBufferPointer { buffer in
                     let span = Span<UInt8>(_unsafeElements: buffer)
                     try handle.write(span)
@@ -273,7 +274,8 @@ extension File.System.Test.Unit {
 
             let filePath = try File.Path(path)
 
-            let result = try await File.Handle.withOpen(filePath, mode: .read) { handle async throws in
+            let result = try await File.Handle.withOpen(filePath, mode: .read) {
+                handle async throws in
                 // Simulate async work
                 try await Task.sleep(for: .milliseconds(1))
                 return try handle.read(count: 10)

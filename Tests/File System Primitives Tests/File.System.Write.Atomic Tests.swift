@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Write.Atomic")
@@ -23,7 +24,11 @@ extension File.System.Test.Unit {
             try? FileManager.default.removeItem(atPath: path)
         }
 
-        private func writeBytes(_ bytes: [UInt8], to pathString: String, options: File.System.Write.Atomic.Options = .init()) throws {
+        private func writeBytes(
+            _ bytes: [UInt8],
+            to pathString: String,
+            options: File.System.Write.Atomic.Options = .init()
+        ) throws {
             let filePath = try File.Path(pathString)
             var bytes = bytes
             try bytes.withUnsafeMutableBufferPointer { buffer in
@@ -39,7 +44,7 @@ extension File.System.Test.Unit {
             let path = uniquePath()
             defer { cleanup(path) }
 
-            let testData: [UInt8] = [72, 101, 108, 108, 111] // "Hello"
+            let testData: [UInt8] = [72, 101, 108, 108, 111]  // "Hello"
 
             try writeBytes(testData, to: path)
 
@@ -306,7 +311,10 @@ extension File.System.Test.Unit {
 
         @Test("closeFailed error description")
         func closeFailedErrorDescription() {
-            let error = File.System.Write.Atomic.Error.closeFailed(errno: 9, message: "Bad file descriptor")
+            let error = File.System.Write.Atomic.Error.closeFailed(
+                errno: 9,
+                message: "Bad file descriptor"
+            )
             #expect(error.description.contains("Close failed"))
             #expect(error.description.contains("Bad file descriptor"))
         }

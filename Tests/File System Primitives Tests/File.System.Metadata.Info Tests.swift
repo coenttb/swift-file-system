@@ -5,10 +5,11 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
-@_spi(Internal) import StandardTime
 import Foundation
+@_spi(Internal) import StandardTime
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Metadata.Info")
@@ -18,7 +19,7 @@ extension File.System.Test.Unit {
 
         @Test("Info initialization")
         func infoInitialization() {
-            let now = Time(__unchecked: (), secondsSinceEpoch: 1702900000, nanoseconds: 0)
+            let now = Time(__unchecked: (), secondsSinceEpoch: 1_702_900_000, nanoseconds: 0)
             let timestamps = File.System.Metadata.Timestamps(
                 accessTime: now,
                 modificationTime: now,
@@ -106,7 +107,7 @@ extension File.System.Test.Unit {
 
         @Test("Info size property")
         func infoSizeProperty() {
-            let now = Time(__unchecked: (), secondsSinceEpoch: 1702900000, nanoseconds: 0)
+            let now = Time(__unchecked: (), secondsSinceEpoch: 1_702_900_000, nanoseconds: 0)
             let timestamps = File.System.Metadata.Timestamps(
                 accessTime: now,
                 modificationTime: now,
@@ -142,7 +143,7 @@ extension File.System.Test.Unit {
 
         @Test("Info linkCount for hard links")
         func infoLinkCountForHardLinks() {
-            let now = Time(__unchecked: (), secondsSinceEpoch: 1702900000, nanoseconds: 0)
+            let now = Time(__unchecked: (), secondsSinceEpoch: 1_702_900_000, nanoseconds: 0)
             let timestamps = File.System.Metadata.Timestamps(
                 accessTime: now,
                 modificationTime: now,
@@ -178,7 +179,7 @@ extension File.System.Test.Unit {
 
         @Test("Info inode uniqueness")
         func infoInodeUniqueness() {
-            let now = Time(__unchecked: (), secondsSinceEpoch: 1702900000, nanoseconds: 0)
+            let now = Time(__unchecked: (), secondsSinceEpoch: 1_702_900_000, nanoseconds: 0)
             let timestamps = File.System.Metadata.Timestamps(
                 accessTime: now,
                 modificationTime: now,
@@ -215,7 +216,7 @@ extension File.System.Test.Unit {
 
         @Test("Info is sendable")
         func infoIsSendable() async {
-            let now = Time(__unchecked: (), secondsSinceEpoch: 1702900000, nanoseconds: 0)
+            let now = Time(__unchecked: (), secondsSinceEpoch: 1_702_900_000, nanoseconds: 0)
             let timestamps = File.System.Metadata.Timestamps(
                 accessTime: now,
                 modificationTime: now,

@@ -55,7 +55,10 @@ extension File.System {
         ///   - path: The path to delete.
         ///   - options: Delete options.
         /// - Throws: `File.System.Delete.Error` on failure.
-        public func delete(_ path: File.Path, options: File.System.Delete.Options = .init()) async throws {
+        public func delete(
+            _ path: File.Path,
+            options: File.System.Delete.Options = .init()
+        ) async throws {
             try await io.run { try File.System.Delete.delete(at: path, options: options) }
         }
 
@@ -73,7 +76,9 @@ extension File.System {
             to destination: File.Path,
             options: File.System.Copy.Options = .init()
         ) async throws {
-            try await io.run { try File.System.Copy.copy(from: source, to: destination, options: options) }
+            try await io.run {
+                try File.System.Copy.copy(from: source, to: destination, options: options)
+            }
         }
 
         // MARK: - Move Operations
@@ -90,7 +95,9 @@ extension File.System {
             to destination: File.Path,
             options: File.System.Move.Options = .init()
         ) async throws {
-            try await io.run { try File.System.Move.move(from: source, to: destination, options: options) }
+            try await io.run {
+                try File.System.Move.move(from: source, to: destination, options: options)
+            }
         }
 
         // MARK: - Directory Operations

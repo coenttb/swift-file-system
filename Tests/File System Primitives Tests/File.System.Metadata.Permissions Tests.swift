@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Metadata.Permissions")
@@ -138,7 +139,7 @@ extension File.System.Test.Unit {
             let testPerms: File.System.Metadata.Permissions = [
                 .ownerRead, .ownerWrite, .ownerExecute,
                 .groupRead,
-                .otherRead
+                .otherRead,
             ]
 
             try File.System.Metadata.Permissions.set(testPerms, at: filePath)
@@ -180,21 +181,24 @@ extension File.System.Test.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/missing")
+            let path = try File.Path("/tmp/missing")
             let error = File.System.Metadata.Permissions.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/secret")
+            let path = try File.Path("/root/secret")
             let error = File.System.Metadata.Permissions.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("operationFailed error description")
         func operationFailedErrorDescription() {
-            let error = File.System.Metadata.Permissions.Error.operationFailed(errno: 22, message: "Invalid argument")
+            let error = File.System.Metadata.Permissions.Error.operationFailed(
+                errno: 22,
+                message: "Invalid argument"
+            )
             #expect(error.description.contains("Operation failed"))
         }
 

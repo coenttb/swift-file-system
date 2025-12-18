@@ -6,13 +6,13 @@
 //
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File.System.Write {
@@ -48,9 +48,9 @@ extension File.System.Write.Append {
         to path: File.Path
     ) throws(Error) {
         #if os(Windows)
-        try _appendWindows(bytes, to: path)
+            try _appendWindows(bytes, to: path)
         #else
-        try _appendPOSIX(bytes, to: path)
+            try _appendPOSIX(bytes, to: path)
         #endif
     }
 
@@ -79,110 +79,116 @@ extension File.System.Write.Append {
 // MARK: - POSIX Implementation
 
 #if !os(Windows)
-extension File.System.Write.Append {
-    internal static func _appendPOSIX(_ bytes: borrowing Span<UInt8>, to path: File.Path) throws(Error) {
-        let fd = open(path.string, O_WRONLY | O_CREAT | O_APPEND, 0o644)
-        guard fd >= 0 else {
-            throw _mapErrno(errno, path: path)
-        }
-        defer { _ = close(fd) }
+    extension File.System.Write.Append {
+        internal static func _appendPOSIX(
+            _ bytes: borrowing Span<UInt8>,
+            to path: File.Path
+        ) throws(Error) {
+            let fd = open(path.string, O_WRONLY | O_CREAT | O_APPEND, 0o644)
+            guard fd >= 0 else {
+                throw _mapErrno(errno, path: path)
+            }
+            defer { _ = close(fd) }
 
-        let count = bytes.count
-        if count == 0 { return }
+            let count = bytes.count
+            if count == 0 { return }
 
-        try bytes.withUnsafeBufferPointer { buffer throws(Error) in
-            guard let base = buffer.baseAddress else { return }
+            try bytes.withUnsafeBufferPointer { buffer throws(Error) in
+                guard let base = buffer.baseAddress else { return }
 
-            var written = 0
-            while written < count {
-                let remaining = count - written
-                let w = Darwin.write(fd, base.advanced(by: written), remaining)
+                var written = 0
+                while written < count {
+                    let remaining = count - written
+                    let w = Darwin.write(fd, base.advanced(by: written), remaining)
 
-                if w > 0 {
-                    written += w
-                } else if w < 0 {
-                    if errno == EINTR { continue }
-                    throw _mapErrno(errno, path: path)
+                    if w > 0 {
+                        written += w
+                    } else if w < 0 {
+                        if errno == EINTR { continue }
+                        throw _mapErrno(errno, path: path)
+                    }
                 }
             }
         }
-    }
 
-    private static func _mapErrno(_ errno: Int32, path: File.Path) -> Error {
-        switch errno {
-        case ENOENT:
-            return .pathNotFound(path)
-        case EACCES, EPERM:
-            return .permissionDenied(path)
-        case EISDIR:
-            return .isDirectory(path)
-        default:
-            let message: String
-            if let cString = strerror(errno) {
-                message = String(cString: cString)
-            } else {
-                message = "Unknown error"
+        private static func _mapErrno(_ errno: Int32, path: File.Path) -> Error {
+            switch errno {
+            case ENOENT:
+                return .pathNotFound(path)
+            case EACCES, EPERM:
+                return .permissionDenied(path)
+            case EISDIR:
+                return .isDirectory(path)
+            default:
+                let message: String
+                if let cString = strerror(errno) {
+                    message = String(cString: cString)
+                } else {
+                    message = "Unknown error"
+                }
+                return .writeFailed(errno: errno, message: message)
             }
-            return .writeFailed(errno: errno, message: message)
         }
     }
-}
 #endif
 
 // MARK: - Windows Implementation
 
 #if os(Windows)
-extension File.System.Write.Append {
-    internal static func _appendWindows(_ bytes: borrowing Span<UInt8>, to path: File.Path) throws(Error) {
-        let handle = path.string.withCString(encodedAs: UTF16.self) { wpath in
-            CreateFileW(
-                wpath,
-                FILE_APPEND_DATA,
-                FILE_SHARE_READ,
-                nil,
-                OPEN_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL,
-                nil
-            )
-        }
+    extension File.System.Write.Append {
+        internal static func _appendWindows(
+            _ bytes: borrowing Span<UInt8>,
+            to path: File.Path
+        ) throws(Error) {
+            let handle = path.string.withCString(encodedAs: UTF16.self) { wpath in
+                CreateFileW(
+                    wpath,
+                    FILE_APPEND_DATA,
+                    FILE_SHARE_READ,
+                    nil,
+                    OPEN_ALWAYS,
+                    FILE_ATTRIBUTE_NORMAL,
+                    nil
+                )
+            }
 
-        guard let handle = handle, handle != INVALID_HANDLE_VALUE else {
-            throw _mapWindowsError(GetLastError(), path: path)
-        }
-        defer { CloseHandle(handle) }
-
-        let count = bytes.count
-        if count == 0 { return }
-
-        try bytes.withUnsafeBufferPointer { buffer throws(Error) in
-            guard let base = buffer.baseAddress else { return }
-
-            var written: DWORD = 0
-            let success = WriteFile(
-                handle,
-                base,
-                DWORD(count),
-                &written,
-                nil
-            )
-
-            guard success && written == count else {
+            guard let handle = handle, handle != INVALID_HANDLE_VALUE else {
                 throw _mapWindowsError(GetLastError(), path: path)
+            }
+            defer { CloseHandle(handle) }
+
+            let count = bytes.count
+            if count == 0 { return }
+
+            try bytes.withUnsafeBufferPointer { buffer throws(Error) in
+                guard let base = buffer.baseAddress else { return }
+
+                var written: DWORD = 0
+                let success = WriteFile(
+                    handle,
+                    base,
+                    DWORD(count),
+                    &written,
+                    nil
+                )
+
+                guard success && written == count else {
+                    throw _mapWindowsError(GetLastError(), path: path)
+                }
+            }
+        }
+
+        private static func _mapWindowsError(_ error: DWORD, path: File.Path) -> Error {
+            switch error {
+            case DWORD(ERROR_FILE_NOT_FOUND), DWORD(ERROR_PATH_NOT_FOUND):
+                return .pathNotFound(path)
+            case DWORD(ERROR_ACCESS_DENIED):
+                return .permissionDenied(path)
+            default:
+                return .writeFailed(errno: Int32(error), message: "Windows error \(error)")
             }
         }
     }
-
-    private static func _mapWindowsError(_ error: DWORD, path: File.Path) -> Error {
-        switch error {
-        case DWORD(ERROR_FILE_NOT_FOUND), DWORD(ERROR_PATH_NOT_FOUND):
-            return .pathNotFound(path)
-        case DWORD(ERROR_ACCESS_DENIED):
-            return .permissionDenied(path)
-        default:
-            return .writeFailed(errno: Int32(error), message: "Windows error \(error)")
-        }
-    }
-}
 #endif
 
 // MARK: - CustomStringConvertible for Error

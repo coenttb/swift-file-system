@@ -104,7 +104,7 @@ Add to your target:
 ### Synchronous API
 
 ```swift
-import FileSystem
+import File_System
 
 // Read file
 let data = try File.System.Read.Full.read(from: path)
@@ -129,7 +129,7 @@ for entry in try File.Directory.Walk(at: rootPath) {
 ### Async API
 
 ```swift
-import FileSystemAsync
+import File_System_Async
 
 let io = File.IO.Executor()
 

@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System
 import Foundation
+import Testing
+
+@testable import File_System
 
 extension File.System.Test.Unit {
     @Suite("File.Descriptor+Convenience")
@@ -123,7 +124,8 @@ extension File.System.Test.Unit {
             let filePath = try File.Path(path)
             #expect(!FileManager.default.fileExists(atPath: path))
 
-            let wasValid = try File.Descriptor.withOpen(filePath, mode: .write, options: [.create]) { descriptor in
+            let wasValid = try File.Descriptor.withOpen(filePath, mode: .write, options: [.create])
+            { descriptor in
                 descriptor.isValid
             }
             #expect(wasValid)
@@ -157,7 +159,8 @@ extension File.System.Test.Unit {
 
             let filePath = try File.Path(path)
 
-            let result = try await File.Descriptor.withOpen(filePath, mode: .read) { descriptor async throws in
+            let result = try await File.Descriptor.withOpen(filePath, mode: .read) {
+                descriptor async throws in
                 // Simulate async work
                 try await Task.sleep(for: .milliseconds(1))
                 return descriptor.isValid
@@ -216,7 +219,10 @@ extension File.System.Test.Unit {
             defer { cleanup(path) }
 
             let filePath = try File.Path(path)
-            let (originalValid, duplicateValid, differentRawValues) = try File.Descriptor.withOpen(filePath, mode: .read) { original in
+            let (originalValid, duplicateValid, differentRawValues) = try File.Descriptor.withOpen(
+                filePath,
+                mode: .read
+            ) { original in
                 var duplicate = try original.duplicated()
 
                 let origValid = original.isValid
@@ -240,7 +246,8 @@ extension File.System.Test.Unit {
             defer { cleanup(path) }
 
             let filePath = try File.Path(path)
-            let originalStillValid = try File.Descriptor.withOpen(filePath, mode: .read) { original in
+            let originalStillValid = try File.Descriptor.withOpen(filePath, mode: .read) {
+                original in
                 var duplicate = try original.duplicated()
                 try duplicate.close()
 

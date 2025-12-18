@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Async
 import Foundation
+import Testing
+
+@testable import File_System_Async
 
 extension File.System.Async.Test.Unit {
     @Suite("File.Directory.Entries")
@@ -145,7 +146,7 @@ extension File.System.Async.Test.Unit {
             let io = File.IO.Executor()
             defer { Task { await io.shutdown() } }
 
-            let path = try File.Path.init("/tmp/nonexistent-\(UUID().uuidString)")
+            let path = try File.Path("/tmp/nonexistent-\(UUID().uuidString)")
 
             let entries = File.Directory.Async(io: io).entries(at: path)
 
@@ -176,7 +177,7 @@ extension File.System.Async.Test.Unit {
             var count = 0
 
             // Read a few entries
-            while let _ = try await iterator.next(), count < 3 {
+            while try await iterator.next() != nil, count < 3 {
                 count += 1
             }
 

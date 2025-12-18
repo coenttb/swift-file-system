@@ -6,13 +6,13 @@
 //
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File {
@@ -130,7 +130,11 @@ extension File.Handle {
 
         let descriptor: File.Descriptor
         do {
-            descriptor = try File.Descriptor.open(path, mode: descriptorMode, options: descriptorOptions)
+            descriptor = try File.Descriptor.open(
+                path,
+                mode: descriptorMode,
+                options: descriptorOptions
+            )
         } catch let error {
             switch error {
             case .pathNotFound(let p):
@@ -164,28 +168,30 @@ extension File.Handle {
         var buffer = [UInt8](repeating: 0, count: count)
 
         #if os(Windows)
-        var bytesRead: DWORD = 0
-        let success = buffer.withUnsafeMutableBufferPointer { ptr -> Bool in
-            guard let base = ptr.baseAddress, let handle = _descriptor.rawHandle else { return false }
-            return ReadFile(handle, base, DWORD(count), &bytesRead, nil)
-        }
-        guard success else {
-            throw .readFailed(errno: Int32(GetLastError()), message: "ReadFile failed")
-        }
-        if Int(bytesRead) < count {
-            buffer.removeLast(count - Int(bytesRead))
-        }
+            var bytesRead: DWORD = 0
+            let success = buffer.withUnsafeMutableBufferPointer { ptr -> Bool in
+                guard let base = ptr.baseAddress, let handle = _descriptor.rawHandle else {
+                    return false
+                }
+                return ReadFile(handle, base, DWORD(count), &bytesRead, nil)
+            }
+            guard success else {
+                throw .readFailed(errno: Int32(GetLastError()), message: "ReadFile failed")
+            }
+            if Int(bytesRead) < count {
+                buffer.removeLast(count - Int(bytesRead))
+            }
         #else
-        let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
-            guard let base = ptr.baseAddress else { return 0 }
-            return Darwin.read(_descriptor.rawValue, base, count)
-        }
-        if bytesRead < 0 {
-            throw .readFailed(errno: errno, message: String(cString: strerror(errno)))
-        }
-        if bytesRead < count {
-            buffer.removeLast(count - bytesRead)
-        }
+            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
+                guard let base = ptr.baseAddress else { return 0 }
+                return Darwin.read(_descriptor.rawValue, base, count)
+            }
+            if bytesRead < 0 {
+                throw .readFailed(errno: errno, message: String(cString: strerror(errno)))
+            }
+            if bytesRead < count {
+                buffer.removeLast(count - bytesRead)
+            }
         #endif
 
         return buffer
@@ -203,17 +209,25 @@ extension File.Handle {
         guard !buffer.isEmpty else { return 0 }
 
         #if os(Windows)
-        var bytesRead: DWORD = 0
-        guard ReadFile(_descriptor.rawHandle!, buffer.baseAddress, DWORD(buffer.count), &bytesRead, nil) else {
-            throw .readFailed(errno: Int32(GetLastError()), message: "ReadFile failed")
-        }
-        return Int(bytesRead)
+            var bytesRead: DWORD = 0
+            guard
+                ReadFile(
+                    _descriptor.rawHandle!,
+                    buffer.baseAddress,
+                    DWORD(buffer.count),
+                    &bytesRead,
+                    nil
+                )
+            else {
+                throw .readFailed(errno: Int32(GetLastError()), message: "ReadFile failed")
+            }
+            return Int(bytesRead)
         #else
-        let result = Darwin.read(_descriptor.rawValue, buffer.baseAddress!, buffer.count)
-        if result < 0 {
-            throw .readFailed(errno: errno, message: String(cString: strerror(errno)))
-        }
-        return result
+            let result = Darwin.read(_descriptor.rawValue, buffer.baseAddress!, buffer.count)
+            if result < 0 {
+                throw .readFailed(errno: errno, message: String(cString: strerror(errno)))
+            }
+            return result
         #endif
     }
 
@@ -233,30 +247,43 @@ extension File.Handle {
             guard let base = buffer.baseAddress else { return }
 
             #if os(Windows)
-            // Loop for partial writes - WriteFile may return fewer bytes than requested
-            var totalWritten: Int = 0
-            while totalWritten < count {
-                var written: DWORD = 0
-                let remaining = count - totalWritten
-                let ptr = base.advanced(by: totalWritten)
-                let success = WriteFile(_descriptor.rawHandle!, ptr, DWORD(remaining), &written, nil)
-                guard success else {
-                    throw .writeFailed(errno: Int32(GetLastError()), message: "WriteFile failed")
+                // Loop for partial writes - WriteFile may return fewer bytes than requested
+                var totalWritten: Int = 0
+                while totalWritten < count {
+                    var written: DWORD = 0
+                    let remaining = count - totalWritten
+                    let ptr = base.advanced(by: totalWritten)
+                    let success = WriteFile(
+                        _descriptor.rawHandle!,
+                        ptr,
+                        DWORD(remaining),
+                        &written,
+                        nil
+                    )
+                    guard success else {
+                        throw .writeFailed(
+                            errno: Int32(GetLastError()),
+                            message: "WriteFile failed"
+                        )
+                    }
+                    totalWritten += Int(written)
                 }
-                totalWritten += Int(written)
-            }
             #else
-            var totalWritten = 0
-            while totalWritten < count {
-                let remaining = count - totalWritten
-                let w = Darwin.write(_descriptor.rawValue, base.advanced(by: totalWritten), remaining)
-                if w > 0 {
-                    totalWritten += w
-                } else if w < 0 {
-                    if errno == EINTR { continue }
-                    throw .writeFailed(errno: errno, message: String(cString: strerror(errno)))
+                var totalWritten = 0
+                while totalWritten < count {
+                    let remaining = count - totalWritten
+                    let w = Darwin.write(
+                        _descriptor.rawValue,
+                        base.advanced(by: totalWritten),
+                        remaining
+                    )
+                    if w > 0 {
+                        totalWritten += w
+                    } else if w < 0 {
+                        if errno == EINTR { continue }
+                        throw .writeFailed(errno: errno, message: String(cString: strerror(errno)))
+                    }
                 }
-            }
             #endif
         }
     }
@@ -269,40 +296,43 @@ extension File.Handle {
     /// - Returns: The new position in the file.
     /// - Throws: `File.Handle.Error` on failure.
     @discardableResult
-    public mutating func seek(to offset: Int64, from origin: SeekOrigin = .start) throws(Error) -> Int64 {
+    public mutating func seek(
+        to offset: Int64,
+        from origin: SeekOrigin = .start
+    ) throws(Error) -> Int64 {
         guard _descriptor.isValid else {
             throw .invalidHandle
         }
 
         #if os(Windows)
-        var newPosition: LARGE_INTEGER = LARGE_INTEGER()
-        var distance: LARGE_INTEGER = LARGE_INTEGER()
-        distance.QuadPart = offset
+            var newPosition: LARGE_INTEGER = LARGE_INTEGER()
+            var distance: LARGE_INTEGER = LARGE_INTEGER()
+            distance.QuadPart = offset
 
-        let whence: DWORD
-        switch origin {
-        case .start: whence = DWORD(FILE_BEGIN)
-        case .current: whence = DWORD(FILE_CURRENT)
-        case .end: whence = DWORD(FILE_END)
-        }
+            let whence: DWORD
+            switch origin {
+            case .start: whence = DWORD(FILE_BEGIN)
+            case .current: whence = DWORD(FILE_CURRENT)
+            case .end: whence = DWORD(FILE_END)
+            }
 
-        guard SetFilePointerEx(_descriptor.rawHandle!, distance, &newPosition, whence) else {
-            throw .seekFailed(errno: Int32(GetLastError()), message: "SetFilePointerEx failed")
-        }
-        return newPosition.QuadPart
+            guard SetFilePointerEx(_descriptor.rawHandle!, distance, &newPosition, whence) else {
+                throw .seekFailed(errno: Int32(GetLastError()), message: "SetFilePointerEx failed")
+            }
+            return newPosition.QuadPart
         #else
-        let whence: Int32
-        switch origin {
-        case .start: whence = SEEK_SET
-        case .current: whence = SEEK_CUR
-        case .end: whence = SEEK_END
-        }
+            let whence: Int32
+            switch origin {
+            case .start: whence = SEEK_SET
+            case .current: whence = SEEK_CUR
+            case .end: whence = SEEK_END
+            }
 
-        let result = lseek(_descriptor.rawValue, off_t(offset), whence)
-        guard result >= 0 else {
-            throw .seekFailed(errno: errno, message: String(cString: strerror(errno)))
-        }
-        return Int64(result)
+            let result = lseek(_descriptor.rawValue, off_t(offset), whence)
+            guard result >= 0 else {
+                throw .seekFailed(errno: errno, message: String(cString: strerror(errno)))
+            }
+            return Int64(result)
         #endif
     }
 
@@ -323,13 +353,13 @@ extension File.Handle {
         }
 
         #if os(Windows)
-        guard FlushFileBuffers(_descriptor.rawHandle!) else {
-            throw .writeFailed(errno: Int32(GetLastError()), message: "FlushFileBuffers failed")
-        }
+            guard FlushFileBuffers(_descriptor.rawHandle!) else {
+                throw .writeFailed(errno: Int32(GetLastError()), message: "FlushFileBuffers failed")
+            }
         #else
-        guard fsync(_descriptor.rawValue) == 0 else {
-            throw .writeFailed(errno: errno, message: String(cString: strerror(errno)))
-        }
+            guard fsync(_descriptor.rawValue) == 0 else {
+                throw .writeFailed(errno: errno, message: String(cString: strerror(errno)))
+            }
         #endif
     }
 

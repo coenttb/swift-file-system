@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Create.Directory")
@@ -44,7 +45,10 @@ extension File.System.Test.Unit {
             let path = uniquePath()
             defer { cleanup(path) }
 
-            try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: false)
+            try FileManager.default.createDirectory(
+                atPath: path,
+                withIntermediateDirectories: false
+            )
 
             let filePath = try File.Path(path)
             #expect(throws: File.System.Create.Directory.Error.self) {
@@ -99,7 +103,9 @@ extension File.System.Test.Unit {
             defer { cleanup(path) }
 
             let filePath = try File.Path(path)
-            let permissions: File.System.Metadata.Permissions = [.ownerRead, .ownerWrite, .ownerExecute]
+            let permissions: File.System.Metadata.Permissions = [
+                .ownerRead, .ownerWrite, .ownerExecute,
+            ]
             let options = File.System.Create.Directory.Options(permissions: permissions)
             try File.System.Create.Directory.create(at: filePath, options: options)
 
@@ -157,7 +163,7 @@ extension File.System.Test.Unit {
 
         @Test("alreadyExists error description")
         func alreadyExistsErrorDescription() throws {
-            let path = try File.Path.init("/tmp/existing")
+            let path = try File.Path("/tmp/existing")
             let error = File.System.Create.Directory.Error.alreadyExists(path)
             #expect(error.description.contains("Directory already exists"))
             #expect(error.description.contains("/tmp/existing"))
@@ -165,21 +171,24 @@ extension File.System.Test.Unit {
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/forbidden")
+            let path = try File.Path("/root/forbidden")
             let error = File.System.Create.Directory.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("parentDirectoryNotFound error description")
         func parentDirectoryNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/nonexistent/dir")
+            let path = try File.Path("/nonexistent/dir")
             let error = File.System.Create.Directory.Error.parentDirectoryNotFound(path)
             #expect(error.description.contains("Parent directory not found"))
         }
 
         @Test("createFailed error description")
         func createFailedErrorDescription() {
-            let error = File.System.Create.Directory.Error.createFailed(errno: 22, message: "Invalid argument")
+            let error = File.System.Create.Directory.Error.createFailed(
+                errno: 22,
+                message: "Invalid argument"
+            )
             #expect(error.description.contains("Create failed"))
             #expect(error.description.contains("Invalid argument"))
             #expect(error.description.contains("22"))
@@ -189,13 +198,22 @@ extension File.System.Test.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path.init("/tmp/a")
-            let path2 = try File.Path.init("/tmp/a")
-            let path3 = try File.Path.init("/tmp/b")
+            let path1 = try File.Path("/tmp/a")
+            let path2 = try File.Path("/tmp/a")
+            let path3 = try File.Path("/tmp/b")
 
-            #expect(File.System.Create.Directory.Error.alreadyExists(path1) == File.System.Create.Directory.Error.alreadyExists(path2))
-            #expect(File.System.Create.Directory.Error.alreadyExists(path1) != File.System.Create.Directory.Error.alreadyExists(path3))
-            #expect(File.System.Create.Directory.Error.alreadyExists(path1) != File.System.Create.Directory.Error.permissionDenied(path1))
+            #expect(
+                File.System.Create.Directory.Error.alreadyExists(path1)
+                    == File.System.Create.Directory.Error.alreadyExists(path2)
+            )
+            #expect(
+                File.System.Create.Directory.Error.alreadyExists(path1)
+                    != File.System.Create.Directory.Error.alreadyExists(path3)
+            )
+            #expect(
+                File.System.Create.Directory.Error.alreadyExists(path1)
+                    != File.System.Create.Directory.Error.permissionDenied(path1)
+            )
         }
     }
 }

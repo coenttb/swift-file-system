@@ -5,11 +5,12 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
+import File_System_Primitives
 import Foundation
 import Testing
-@testable import File_System_Async
-import File_System_Primitives
 import TestingPerformance
+
+@testable import File_System_Async
 
 extension File.System.Async.Test.Performance {
 
@@ -418,7 +419,7 @@ extension File.System.Async.Test.Performance {
 
             // 50 stat operations
             for _ in 0..<50 {
-                let exists = try await system.exists( filePath)
+                let exists = try await system.exists(filePath)
                 #expect(exists)
             }
         }
@@ -447,7 +448,7 @@ extension File.System.Async.Test.Performance {
             let system = File.System.Async(io: executor)
             try await system.copy(from: sourcePath, to: destPath)
 
-            let destExists = try await system.exists( destPath)
+            let destExists = try await system.exists(destPath)
             #expect(destExists)
         }
     }
@@ -565,7 +566,10 @@ extension File.System.Async.Test.Performance {
             await executor.shutdown()
         }
 
-        @Test("Streaming doesn't accumulate memory", .timed(iterations: 3, maxAllocations: 5_000_000))
+        @Test(
+            "Streaming doesn't accumulate memory",
+            .timed(iterations: 3, maxAllocations: 5_000_000)
+        )
         func streamingMemoryBounded() async throws {
             let tempDir = try File.Path(NSTemporaryDirectory())
             let filePath = tempDir.appending("perf_mem_stream_\(UUID().uuidString).bin")

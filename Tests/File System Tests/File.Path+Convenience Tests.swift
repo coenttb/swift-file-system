@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System
 import Foundation
+import Testing
+
+@testable import File_System
 
 extension File.System.Test.Unit {
     @Suite("File.Path+Convenience")
@@ -112,10 +113,10 @@ extension File.System.Test.Unit {
             #expect(path.count == 4)
         }
 
-        @Test("count on root")
-        func countOnRoot() {
+        @Test("root path is not empty")
+        func rootPathIsNotEmpty() {
             let path: File.Path = "/"
-            #expect(path.count == 0)
+            #expect(!path.isEmpty)  // "/" contains the root component
         }
 
         // MARK: - hasPrefix

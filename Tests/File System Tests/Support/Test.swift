@@ -5,8 +5,8 @@
 //  Test suite structure for File System convenience layer tests.
 //
 
-import Testing
 import File_System
+import Testing
 
 extension Test {
     struct Unit {}

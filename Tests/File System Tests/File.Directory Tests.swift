@@ -6,6 +6,7 @@
 //
 
 import Testing
+
 @testable import File_System
 
 extension File.System.Test.Unit {
@@ -34,7 +35,7 @@ extension File.System.Test.Unit {
 
         @Test("init from path")
         func initFromPath() throws {
-            let path = try File.Path.init("/tmp/test")
+            let path = try File.Path("/tmp/test")
             let dir = File.Directory(path)
             #expect(dir.path == path)
         }

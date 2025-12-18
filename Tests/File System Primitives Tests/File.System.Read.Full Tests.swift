@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Read.Full")
@@ -42,7 +43,7 @@ extension File.System.Test.Unit {
 
         @Test("Read small file")
         func readSmallFile() throws {
-            let content: [UInt8] = [72, 101, 108, 108, 111] // "Hello"
+            let content: [UInt8] = [72, 101, 108, 108, 111]  // "Hello"
             let path = try createTempFile(content: content)
             defer { cleanup(path) }
 
@@ -169,7 +170,7 @@ extension File.System.Test.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/missing.txt")
+            let path = try File.Path("/tmp/missing.txt")
             let error = File.System.Read.Full.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
             #expect(error.description.contains("/tmp/missing.txt"))
@@ -177,14 +178,14 @@ extension File.System.Test.Unit {
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/secret.txt")
+            let path = try File.Path("/root/secret.txt")
             let error = File.System.Read.Full.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("isDirectory error description")
         func isDirectoryErrorDescription() throws {
-            let path = try File.Path.init("/tmp")
+            let path = try File.Path("/tmp")
             let error = File.System.Read.Full.Error.isDirectory(path)
             #expect(error.description.contains("Is a directory"))
         }
@@ -207,14 +208,26 @@ extension File.System.Test.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path.init("/tmp/a")
-            let path2 = try File.Path.init("/tmp/a")
-            let path3 = try File.Path.init("/tmp/b")
+            let path1 = try File.Path("/tmp/a")
+            let path2 = try File.Path("/tmp/a")
+            let path3 = try File.Path("/tmp/b")
 
-            #expect(File.System.Read.Full.Error.pathNotFound(path1) == File.System.Read.Full.Error.pathNotFound(path2))
-            #expect(File.System.Read.Full.Error.pathNotFound(path1) != File.System.Read.Full.Error.pathNotFound(path3))
-            #expect(File.System.Read.Full.Error.pathNotFound(path1) != File.System.Read.Full.Error.permissionDenied(path1))
-            #expect(File.System.Read.Full.Error.tooManyOpenFiles == File.System.Read.Full.Error.tooManyOpenFiles)
+            #expect(
+                File.System.Read.Full.Error.pathNotFound(path1)
+                    == File.System.Read.Full.Error.pathNotFound(path2)
+            )
+            #expect(
+                File.System.Read.Full.Error.pathNotFound(path1)
+                    != File.System.Read.Full.Error.pathNotFound(path3)
+            )
+            #expect(
+                File.System.Read.Full.Error.pathNotFound(path1)
+                    != File.System.Read.Full.Error.permissionDenied(path1)
+            )
+            #expect(
+                File.System.Read.Full.Error.tooManyOpenFiles
+                    == File.System.Read.Full.Error.tooManyOpenFiles
+            )
         }
     }
 }

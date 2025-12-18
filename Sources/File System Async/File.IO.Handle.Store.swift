@@ -331,7 +331,7 @@ extension File.IO {
             for (id, box) in remainingHandles {
                 if let error = box.close() {
                     #if DEBUG
-                    print("Warning: Error closing handle \(id.raw) during shutdown: \(error)")
+                        print("Warning: Error closing handle \(id.raw) during shutdown: \(error)")
                     #endif
                 }
             }

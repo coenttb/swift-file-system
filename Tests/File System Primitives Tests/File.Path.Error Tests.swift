@@ -6,6 +6,7 @@
 //
 
 import Testing
+
 @testable import File_System_Primitives
 
 extension File.System.Test.Unit {
@@ -95,7 +96,10 @@ extension File.System.Test.Unit {
         @Test("Same errors are equal")
         func sameErrorsAreEqual() {
             #expect(File.Path.Error.empty == File.Path.Error.empty)
-            #expect(File.Path.Error.containsControlCharacters == File.Path.Error.containsControlCharacters)
+            #expect(
+                File.Path.Error.containsControlCharacters
+                    == File.Path.Error.containsControlCharacters
+            )
         }
 
         @Test("Different errors are not equal")

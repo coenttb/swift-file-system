@@ -6,13 +6,13 @@
 //
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File.System {
@@ -56,9 +56,9 @@ extension File.System.Delete {
     /// - Throws: `File.System.Delete.Error` on failure.
     public static func delete(at path: File.Path) throws(Error) {
         #if os(Windows)
-        try _deleteWindows(at: path, options: Options())
+            try _deleteWindows(at: path, options: Options())
         #else
-        try _deletePOSIX(at: path, options: Options())
+            try _deletePOSIX(at: path, options: Options())
         #endif
     }
 
@@ -70,9 +70,9 @@ extension File.System.Delete {
     /// - Throws: `File.System.Delete.Error` on failure.
     public static func delete(at path: File.Path, options: Options) throws(Error) {
         #if os(Windows)
-        try _deleteWindows(at: path, options: options)
+            try _deleteWindows(at: path, options: options)
         #else
-        try _deletePOSIX(at: path, options: options)
+            try _deletePOSIX(at: path, options: options)
         #endif
     }
 

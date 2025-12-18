@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Move")
@@ -192,21 +193,21 @@ extension File.System.Test.Unit {
 
         @Test("sourceNotFound error description")
         func sourceNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/missing")
+            let path = try File.Path("/tmp/missing")
             let error = File.System.Move.Error.sourceNotFound(path)
             #expect(error.description.contains("Source not found"))
         }
 
         @Test("destinationExists error description")
         func destinationExistsErrorDescription() throws {
-            let path = try File.Path.init("/tmp/existing")
+            let path = try File.Path("/tmp/existing")
             let error = File.System.Move.Error.destinationExists(path)
             #expect(error.description.contains("already exists"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/secret")
+            let path = try File.Path("/root/secret")
             let error = File.System.Move.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
@@ -222,11 +223,17 @@ extension File.System.Test.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path.init("/tmp/a")
-            let path2 = try File.Path.init("/tmp/a")
+            let path1 = try File.Path("/tmp/a")
+            let path2 = try File.Path("/tmp/a")
 
-            #expect(File.System.Move.Error.sourceNotFound(path1) == File.System.Move.Error.sourceNotFound(path2))
-            #expect(File.System.Move.Error.destinationExists(path1) == File.System.Move.Error.destinationExists(path2))
+            #expect(
+                File.System.Move.Error.sourceNotFound(path1)
+                    == File.System.Move.Error.sourceNotFound(path2)
+            )
+            #expect(
+                File.System.Move.Error.destinationExists(path1)
+                    == File.System.Move.Error.destinationExists(path2)
+            )
         }
     }
 }

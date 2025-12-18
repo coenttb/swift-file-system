@@ -6,13 +6,13 @@
 //
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File.System.Create {
@@ -62,9 +62,9 @@ extension File.System.Create.Directory {
     /// - Throws: `File.System.Create.Directory.Error` on failure.
     public static func create(at path: File.Path) throws(Error) {
         #if os(Windows)
-        try _createWindows(at: path, options: Options())
+            try _createWindows(at: path, options: Options())
         #else
-        try _createPOSIX(at: path, options: Options())
+            try _createPOSIX(at: path, options: Options())
         #endif
     }
 
@@ -76,9 +76,9 @@ extension File.System.Create.Directory {
     /// - Throws: `File.System.Create.Directory.Error` on failure.
     public static func create(at path: File.Path, options: Options) throws(Error) {
         #if os(Windows)
-        try _createWindows(at: path, options: options)
+            try _createWindows(at: path, options: options)
         #else
-        try _createPOSIX(at: path, options: options)
+            try _createPOSIX(at: path, options: options)
         #endif
     }
 

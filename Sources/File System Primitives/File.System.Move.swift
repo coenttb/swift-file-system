@@ -6,13 +6,13 @@
 //
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File.System {
@@ -63,9 +63,9 @@ extension File.System.Move {
         to destination: File.Path
     ) throws(Error) {
         #if os(Windows)
-        try _moveWindows(from: source, to: destination, options: Options())
+            try _moveWindows(from: source, to: destination, options: Options())
         #else
-        try _movePOSIX(from: source, to: destination, options: Options())
+            try _movePOSIX(from: source, to: destination, options: Options())
         #endif
     }
 
@@ -82,9 +82,9 @@ extension File.System.Move {
         options: Options
     ) throws(Error) {
         #if os(Windows)
-        try _moveWindows(from: source, to: destination, options: options)
+            try _moveWindows(from: source, to: destination, options: options)
         #else
-        try _movePOSIX(from: source, to: destination, options: options)
+            try _movePOSIX(from: source, to: destination, options: options)
         #endif
     }
 

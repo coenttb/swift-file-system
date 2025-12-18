@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Stat")
@@ -53,7 +54,7 @@ extension File.System.Test.Unit {
 
         @Test("exists returns false for non-existing path")
         func existsReturnsFalseForNonExisting() throws {
-            let filePath = try File.Path.init("/tmp/non-existing-\(UUID().uuidString)")
+            let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
             #expect(File.System.Stat.exists(at: filePath) == false)
         }
 
@@ -79,7 +80,7 @@ extension File.System.Test.Unit {
 
         @Test("isFile returns false for non-existing path")
         func isFileReturnsFalseForNonExisting() throws {
-            let filePath = try File.Path.init("/tmp/non-existing-\(UUID().uuidString)")
+            let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
             #expect(File.System.Stat.isFile(at: filePath) == false)
         }
 
@@ -105,7 +106,7 @@ extension File.System.Test.Unit {
 
         @Test("isDirectory returns false for non-existing path")
         func isDirectoryReturnsFalseForNonExisting() throws {
-            let filePath = try File.Path.init("/tmp/non-existing-\(UUID().uuidString)")
+            let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
             #expect(File.System.Stat.isDirectory(at: filePath) == false)
         }
 
@@ -120,7 +121,10 @@ extension File.System.Test.Unit {
                 cleanup(linkPath)
             }
 
-            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
+            try FileManager.default.createSymbolicLink(
+                atPath: linkPath,
+                withDestinationPath: targetPath
+            )
 
             let filePath = try File.Path(linkPath)
             #expect(File.System.Stat.isSymlink(at: filePath) == true)
@@ -155,7 +159,7 @@ extension File.System.Test.Unit {
             let info = try File.System.Stat.info(at: filePath)
 
             #expect(info.type == .regular)
-            #expect(info.size == 13) // "Hello, World!" is 13 bytes
+            #expect(info.size == 13)  // "Hello, World!" is 13 bytes
         }
 
         @Test("info returns correct type for directory")
@@ -178,7 +182,10 @@ extension File.System.Test.Unit {
                 cleanup(linkPath)
             }
 
-            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
+            try FileManager.default.createSymbolicLink(
+                atPath: linkPath,
+                withDestinationPath: targetPath
+            )
 
             let filePath = try File.Path(linkPath)
             let info = try File.System.Stat.info(at: filePath)
@@ -189,7 +196,7 @@ extension File.System.Test.Unit {
 
         @Test("info throws for non-existing path")
         func infoThrowsForNonExisting() throws {
-            let filePath = try File.Path.init("/tmp/non-existing-\(UUID().uuidString)")
+            let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
 
             #expect(throws: File.System.Stat.Error.self) {
                 try File.System.Stat.info(at: filePath)
@@ -242,14 +249,14 @@ extension File.System.Test.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/non-existing")
+            let path = try File.Path("/tmp/non-existing")
             let error = File.System.Stat.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/restricted")
+            let path = try File.Path("/root/restricted")
             let error = File.System.Stat.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
@@ -265,15 +272,19 @@ extension File.System.Test.Unit {
 
         @Test("lstatInfo returns symbolicLink type for symlink")
         func lstatInfoReturnsSymlinkType() throws {
-            let targetPath = try File.Path.init("/tmp/stat-lstat-target-\(UUID().uuidString).txt")
-            let linkPath = try File.Path.init("/tmp/stat-lstat-test-\(UUID().uuidString)")
+            let targetPath = try File.Path("/tmp/stat-lstat-target-\(UUID().uuidString).txt")
+            let linkPath = try File.Path("/tmp/stat-lstat-test-\(UUID().uuidString)")
             defer {
                 try? File.System.Delete.delete(at: targetPath)
                 try? File.System.Delete.delete(at: linkPath)
             }
 
             // Create target file using our API
-            var handle = try File.Handle.open(targetPath, mode: .write, options: [.create, .closeOnExec])
+            var handle = try File.Handle.open(
+                targetPath,
+                mode: .write,
+                options: [.create, .closeOnExec]
+            )
             try Array("test".utf8).withUnsafeBufferPointer { buffer in
                 try handle.write(Span<UInt8>(_unsafeElements: buffer))
             }
@@ -293,15 +304,19 @@ extension File.System.Test.Unit {
 
         @Test("lstatInfo returns different inode than info for symlink")
         func lstatInfoReturnsDifferentInodeForSymlink() throws {
-            let targetPath = try File.Path.init("/tmp/stat-inode-target-\(UUID().uuidString).txt")
-            let linkPath = try File.Path.init("/tmp/stat-inode-test-\(UUID().uuidString)")
+            let targetPath = try File.Path("/tmp/stat-inode-target-\(UUID().uuidString).txt")
+            let linkPath = try File.Path("/tmp/stat-inode-test-\(UUID().uuidString)")
             defer {
                 try? File.System.Delete.delete(at: targetPath)
                 try? File.System.Delete.delete(at: linkPath)
             }
 
             // Create target file using our API
-            var handle = try File.Handle.open(targetPath, mode: .write, options: [.create, .closeOnExec])
+            var handle = try File.Handle.open(
+                targetPath,
+                mode: .write,
+                options: [.create, .closeOnExec]
+            )
             try Array("test".utf8).withUnsafeBufferPointer { buffer in
                 try handle.write(Span<UInt8>(_unsafeElements: buffer))
             }
@@ -326,11 +341,15 @@ extension File.System.Test.Unit {
 
         @Test("lstatInfo same as info for regular file")
         func lstatInfoSameAsInfoForRegularFile() throws {
-            let filePath = try File.Path.init("/tmp/stat-lstat-regular-\(UUID().uuidString).txt")
+            let filePath = try File.Path("/tmp/stat-lstat-regular-\(UUID().uuidString).txt")
             defer { try? File.System.Delete.delete(at: filePath) }
 
             // Create file using our API
-            var handle = try File.Handle.open(filePath, mode: .write, options: [.create, .closeOnExec])
+            var handle = try File.Handle.open(
+                filePath,
+                mode: .write,
+                options: [.create, .closeOnExec]
+            )
             try Array("test content".utf8).withUnsafeBufferPointer { buffer in
                 try handle.write(Span<UInt8>(_unsafeElements: buffer))
             }

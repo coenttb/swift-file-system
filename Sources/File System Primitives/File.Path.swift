@@ -5,8 +5,8 @@
 //  Created by Coen ten Thije Boonkkamp on 17/12/2025.
 //
 
-import SystemPackage
 public import INCITS_4_1986
+import SystemPackage
 
 extension File {
     /// A file system path.

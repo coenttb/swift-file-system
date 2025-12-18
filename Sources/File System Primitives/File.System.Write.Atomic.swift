@@ -13,13 +13,13 @@
 // You never get a partial/corrupted file.
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File.System.Write {
@@ -139,9 +139,9 @@ extension File.System.Write {
             options: borrowing Options = Options()
         ) throws(Error) {
             #if os(Windows)
-            try WindowsAtomic.writeSpan(bytes, to: path.string, options: options)
+                try WindowsAtomic.writeSpan(bytes, to: path.string, options: options)
             #else
-            try POSIXAtomic.writeSpan(bytes, to: path.string, options: options)
+                try POSIXAtomic.writeSpan(bytes, to: path.string, options: options)
             #endif
         }
 
@@ -186,12 +186,12 @@ extension File.System.Write.Atomic {
     @usableFromInline
     static func errorMessage(for errno: Int32) -> String {
         #if os(Windows)
-        return "error \(errno)"
+            return "error \(errno)"
         #else
-        if let cString = strerror(errno) {
-            return String(cString: cString)
-        }
-        return "error \(errno)"
+            if let cString = strerror(errno) {
+                return String(cString: cString)
+            }
+            return "error \(errno)"
         #endif
     }
 }

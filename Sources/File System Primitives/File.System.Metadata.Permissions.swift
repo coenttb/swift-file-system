@@ -6,13 +6,13 @@
 //
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File.System.Metadata {
@@ -50,13 +50,19 @@ extension File.System.Metadata {
         public static let otherAll: Permissions = [.otherRead, .otherWrite, .otherExecute]
 
         /// Default file permissions (644).
-        public static let defaultFile: Permissions = [.ownerRead, .ownerWrite, .groupRead, .otherRead]
+        public static let defaultFile: Permissions = [
+            .ownerRead, .ownerWrite, .groupRead, .otherRead,
+        ]
 
         /// Default directory permissions (755).
-        public static let defaultDirectory: Permissions = [.ownerAll, .groupRead, .groupExecute, .otherRead, .otherExecute]
+        public static let defaultDirectory: Permissions = [
+            .ownerAll, .groupRead, .groupExecute, .otherRead, .otherExecute,
+        ]
 
         /// Executable file permissions (755).
-        public static let executable: Permissions = [.ownerAll, .groupRead, .groupExecute, .otherRead, .otherExecute]
+        public static let executable: Permissions = [
+            .ownerAll, .groupRead, .groupExecute, .otherRead, .otherExecute,
+        ]
     }
 }
 
@@ -81,14 +87,14 @@ extension File.System.Metadata.Permissions {
     /// - Throws: `File.System.Metadata.Permissions.Error` on failure.
     public static func get(at path: File.Path) throws(Error) -> Self {
         #if os(Windows)
-        // Windows doesn't have POSIX permissions
-        return .defaultFile
+            // Windows doesn't have POSIX permissions
+            return .defaultFile
         #else
-        var statBuf = stat()
-        guard stat(path.string, &statBuf) == 0 else {
-            throw _mapErrno(errno, path: path)
-        }
-        return Self(rawValue: UInt16(statBuf.st_mode & 0o7777))
+            var statBuf = stat()
+            guard stat(path.string, &statBuf) == 0 else {
+                throw _mapErrno(errno, path: path)
+            }
+            return Self(rawValue: UInt16(statBuf.st_mode & 0o7777))
         #endif
     }
 
@@ -100,32 +106,32 @@ extension File.System.Metadata.Permissions {
     /// - Throws: `File.System.Metadata.Permissions.Error` on failure.
     public static func set(_ permissions: Self, at path: File.Path) throws(Error) {
         #if os(Windows)
-        // Windows doesn't have POSIX permissions - this is a no-op
-        return
+            // Windows doesn't have POSIX permissions - this is a no-op
+            return
         #else
-        guard chmod(path.string, mode_t(permissions.rawValue)) == 0 else {
-            throw _mapErrno(errno, path: path)
-        }
+            guard chmod(path.string, mode_t(permissions.rawValue)) == 0 else {
+                throw _mapErrno(errno, path: path)
+            }
         #endif
     }
 
     #if !os(Windows)
-    private static func _mapErrno(_ errno: Int32, path: File.Path) -> Error {
-        switch errno {
-        case ENOENT:
-            return .pathNotFound(path)
-        case EACCES, EPERM:
-            return .permissionDenied(path)
-        default:
-            let message: String
-            if let cString = strerror(errno) {
-                message = String(cString: cString)
-            } else {
-                message = "Unknown error"
+        private static func _mapErrno(_ errno: Int32, path: File.Path) -> Error {
+            switch errno {
+            case ENOENT:
+                return .pathNotFound(path)
+            case EACCES, EPERM:
+                return .permissionDenied(path)
+            default:
+                let message: String
+                if let cString = strerror(errno) {
+                    message = String(cString: cString)
+                } else {
+                    message = "Unknown error"
+                }
+                return .operationFailed(errno: errno, message: message)
             }
-            return .operationFailed(errno: errno, message: message)
         }
-    }
     #endif
 }
 

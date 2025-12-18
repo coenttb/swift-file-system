@@ -6,13 +6,13 @@
 //
 
 #if canImport(Darwin)
-import Darwin
+    import Darwin
 #elseif canImport(Glibc)
-import Glibc
+    import Glibc
 #elseif canImport(Musl)
-import Musl
+    import Musl
 #elseif os(Windows)
-import WinSDK
+    import WinSDK
 #endif
 
 extension File {
@@ -35,36 +35,36 @@ extension File {
     /// - Use `duplicated()` to create an independent copy
     public struct Descriptor: ~Copyable {
         #if os(Windows)
-        @usableFromInline
-        internal var _handle: UnsafeSendable<HANDLE?>
+            @usableFromInline
+            internal var _handle: UnsafeSendable<HANDLE?>
         #else
-        @usableFromInline
-        internal var _fd: Int32
+            @usableFromInline
+            internal var _fd: Int32
         #endif
 
         #if os(Windows)
-        /// Creates a descriptor from a raw Windows HANDLE.
-        @usableFromInline
-        internal init(__unchecked handle: HANDLE) {
-            self._handle = UnsafeSendable(handle)
-        }
+            /// Creates a descriptor from a raw Windows HANDLE.
+            @usableFromInline
+            internal init(__unchecked handle: HANDLE) {
+                self._handle = UnsafeSendable(handle)
+            }
         #else
-        /// Creates a descriptor from a raw POSIX file descriptor.
-        @usableFromInline
-        internal init(__unchecked fd: Int32) {
-            self._fd = fd
-        }
+            /// Creates a descriptor from a raw POSIX file descriptor.
+            @usableFromInline
+            internal init(__unchecked fd: Int32) {
+                self._fd = fd
+            }
         #endif
 
         deinit {
             #if os(Windows)
-            if let handle = _handle.value, handle != INVALID_HANDLE_VALUE {
-                CloseHandle(handle)
-            }
+                if let handle = _handle.value, handle != INVALID_HANDLE_VALUE {
+                    CloseHandle(handle)
+                }
             #else
-            if _fd >= 0 {
-                _ = _posixClose(_fd)
-            }
+                if _fd >= 0 {
+                    _ = _posixClose(_fd)
+                }
             #endif
         }
     }
@@ -137,32 +137,32 @@ extension File.Descriptor {
 
 extension File.Descriptor {
     #if os(Windows)
-    /// The raw Windows HANDLE, or `nil` if closed.
-    @inlinable
-    public var rawHandle: HANDLE? {
-        _handle.value
-    }
-
-    /// Whether this descriptor is valid (not closed).
-    @inlinable
-    public var isValid: Bool {
-        if let handle = _handle.value {
-            return handle != INVALID_HANDLE_VALUE
+        /// The raw Windows HANDLE, or `nil` if closed.
+        @inlinable
+        public var rawHandle: HANDLE? {
+            _handle.value
         }
-        return false
-    }
-    #else
-    /// The raw POSIX file descriptor, or -1 if closed.
-    @inlinable
-    public var rawValue: Int32 {
-        _fd
-    }
 
-    /// Whether this descriptor is valid (not closed).
-    @inlinable
-    public var isValid: Bool {
-        _fd >= 0
-    }
+        /// Whether this descriptor is valid (not closed).
+        @inlinable
+        public var isValid: Bool {
+            if let handle = _handle.value {
+                return handle != INVALID_HANDLE_VALUE
+            }
+            return false
+        }
+    #else
+        /// The raw POSIX file descriptor, or -1 if closed.
+        @inlinable
+        public var rawValue: Int32 {
+            _fd
+        }
+
+        /// Whether this descriptor is valid (not closed).
+        @inlinable
+        public var isValid: Bool {
+            _fd >= 0
+        }
     #endif
 }
 
@@ -183,9 +183,9 @@ extension File.Descriptor {
         options: Options = [.closeOnExec]
     ) throws(Error) -> File.Descriptor {
         #if os(Windows)
-        return try _openWindows(path, mode: mode, options: options)
+            return try _openWindows(path, mode: mode, options: options)
         #else
-        return try _openPOSIX(path, mode: mode, options: options)
+            return try _openPOSIX(path, mode: mode, options: options)
         #endif
     }
 
@@ -196,24 +196,24 @@ extension File.Descriptor {
     /// - Throws: `File.Descriptor.Error` on failure.
     public consuming func close() throws(Error) {
         #if os(Windows)
-        guard let handle = _handle.value, handle != INVALID_HANDLE_VALUE else {
-            throw .alreadyClosed
-        }
-        guard CloseHandle(handle) else {
-            let error = GetLastError()
-            throw .closeFailed(errno: Int32(error), message: Self._formatWindowsError(error))
-        }
-        _handle = UnsafeSendable(INVALID_HANDLE_VALUE)  // Only invalidate after successful close
+            guard let handle = _handle.value, handle != INVALID_HANDLE_VALUE else {
+                throw .alreadyClosed
+            }
+            guard CloseHandle(handle) else {
+                let error = GetLastError()
+                throw .closeFailed(errno: Int32(error), message: Self._formatWindowsError(error))
+            }
+            _handle = UnsafeSendable(INVALID_HANDLE_VALUE)  // Only invalidate after successful close
         #else
-        guard _fd >= 0 else {
-            throw .alreadyClosed
-        }
-        let fd = _fd
-        _fd = -1  // Invalidate first - fd is consumed regardless of close() result
-        let closeResult = _posixClose(fd)
-        guard closeResult == 0 else {
-            throw .closeFailed(errno: errno, message: String(cString: strerror(errno)))
-        }
+            guard _fd >= 0 else {
+                throw .alreadyClosed
+            }
+            let fd = _fd
+            _fd = -1  // Invalidate first - fd is consumed regardless of close() result
+            let closeResult = _posixClose(fd)
+            guard closeResult == 0 else {
+                throw .closeFailed(errno: errno, message: String(cString: strerror(errno)))
+            }
         #endif
     }
 
@@ -233,41 +233,46 @@ extension File.Descriptor {
     /// - Throws: `File.Descriptor.Error.duplicateFailed` on failure.
     public func duplicated() throws(Error) -> File.Descriptor {
         #if os(Windows)
-        guard let handle = _handle.value, handle != INVALID_HANDLE_VALUE else {
-            throw .invalidDescriptor
-        }
+            guard let handle = _handle.value, handle != INVALID_HANDLE_VALUE else {
+                throw .invalidDescriptor
+            }
 
-        var duplicateHandle: HANDLE?
-        let currentProcess = GetCurrentProcess()
+            var duplicateHandle: HANDLE?
+            let currentProcess = GetCurrentProcess()
 
-        guard DuplicateHandle(
-            currentProcess,
-            handle,
-            currentProcess,
-            &duplicateHandle,
-            0,
-            false,
-            DWORD(DUPLICATE_SAME_ACCESS)
-        ) else {
-            throw .duplicateFailed(errno: Int32(GetLastError()), message: "DuplicateHandle failed")
-        }
+            guard
+                DuplicateHandle(
+                    currentProcess,
+                    handle,
+                    currentProcess,
+                    &duplicateHandle,
+                    0,
+                    false,
+                    DWORD(DUPLICATE_SAME_ACCESS)
+                )
+            else {
+                throw .duplicateFailed(
+                    errno: Int32(GetLastError()),
+                    message: "DuplicateHandle failed"
+                )
+            }
 
-        guard let newHandle = duplicateHandle else {
-            throw .duplicateFailed(errno: 0, message: "DuplicateHandle returned nil")
-        }
+            guard let newHandle = duplicateHandle else {
+                throw .duplicateFailed(errno: 0, message: "DuplicateHandle returned nil")
+            }
 
-        return File.Descriptor(__unchecked: newHandle)
+            return File.Descriptor(__unchecked: newHandle)
         #else
-        guard _fd >= 0 else {
-            throw .invalidDescriptor
-        }
+            guard _fd >= 0 else {
+                throw .invalidDescriptor
+            }
 
-        let newFd = dup(_fd)
-        guard newFd >= 0 else {
-            throw .duplicateFailed(errno: errno, message: String(cString: strerror(errno)))
-        }
+            let newFd = dup(_fd)
+            guard newFd >= 0 else {
+                throw .duplicateFailed(errno: errno, message: String(cString: strerror(errno)))
+            }
 
-        return File.Descriptor(__unchecked: newFd)
+            return File.Descriptor(__unchecked: newFd)
         #endif
     }
 }
@@ -304,30 +309,30 @@ extension File.Descriptor.Error: CustomStringConvertible {
 // MARK: - POSIX Close Helper
 
 #if !os(Windows)
-/// Close a file descriptor with POSIX semantics.
-///
-/// Treats EINTR as "closed" - the file descriptor is consumed
-/// regardless of whether the kernel completed all cleanup.
-/// This follows the POSIX.1-2008 specification where a descriptor
-/// is always invalid after close(), even if EINTR occurs.
-///
-/// - Parameter fd: The file descriptor to close.
-/// - Returns: 0 on success, -1 on error (with errno set).
-@inline(__always)
-internal func _posixClose(_ fd: Int32) -> Int32 {
-    #if canImport(Darwin)
-    let result = Darwin.close(fd)
-    #else
-    let result = close(fd)
-    #endif
+    /// Close a file descriptor with POSIX semantics.
+    ///
+    /// Treats EINTR as "closed" - the file descriptor is consumed
+    /// regardless of whether the kernel completed all cleanup.
+    /// This follows the POSIX.1-2008 specification where a descriptor
+    /// is always invalid after close(), even if EINTR occurs.
+    ///
+    /// - Parameter fd: The file descriptor to close.
+    /// - Returns: 0 on success, -1 on error (with errno set).
+    @inline(__always)
+    internal func _posixClose(_ fd: Int32) -> Int32 {
+        #if canImport(Darwin)
+            let result = Darwin.close(fd)
+        #else
+            let result = close(fd)
+        #endif
 
-    // EINTR on close is treated as closed - the fd is now invalid
-    // and must not be retried (which would potentially close a recycled fd)
-    if result == -1 && errno == EINTR {
-        return 0
+        // EINTR on close is treated as closed - the fd is now invalid
+        // and must not be retried (which would potentially close a recycled fd)
+        if result == -1 && errno == EINTR {
+            return 0
+        }
+        return result
     }
-    return result
-}
 #endif
 
 // MARK: - UnsafeSendable Helper

@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.System.Link.Symbolic")
@@ -136,28 +137,31 @@ extension File.System.Test.Unit {
 
         @Test("targetNotFound error description")
         func targetNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/missing")
+            let path = try File.Path("/tmp/missing")
             let error = File.System.Link.Symbolic.Error.targetNotFound(path)
             #expect(error.description.contains("Target not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/secret")
+            let path = try File.Path("/root/secret")
             let error = File.System.Link.Symbolic.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("alreadyExists error description")
         func alreadyExistsErrorDescription() throws {
-            let path = try File.Path.init("/tmp/existing")
+            let path = try File.Path("/tmp/existing")
             let error = File.System.Link.Symbolic.Error.alreadyExists(path)
             #expect(error.description.contains("already exists"))
         }
 
         @Test("linkFailed error description")
         func linkFailedErrorDescription() {
-            let error = File.System.Link.Symbolic.Error.linkFailed(errno: 22, message: "Invalid argument")
+            let error = File.System.Link.Symbolic.Error.linkFailed(
+                errno: 22,
+                message: "Invalid argument"
+            )
             #expect(error.description.contains("Symlink creation failed"))
         }
 
@@ -165,11 +169,17 @@ extension File.System.Test.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path.init("/tmp/a")
-            let path2 = try File.Path.init("/tmp/a")
+            let path1 = try File.Path("/tmp/a")
+            let path2 = try File.Path("/tmp/a")
 
-            #expect(File.System.Link.Symbolic.Error.alreadyExists(path1) == File.System.Link.Symbolic.Error.alreadyExists(path2))
-            #expect(File.System.Link.Symbolic.Error.targetNotFound(path1) == File.System.Link.Symbolic.Error.targetNotFound(path2))
+            #expect(
+                File.System.Link.Symbolic.Error.alreadyExists(path1)
+                    == File.System.Link.Symbolic.Error.alreadyExists(path2)
+            )
+            #expect(
+                File.System.Link.Symbolic.Error.targetNotFound(path1)
+                    == File.System.Link.Symbolic.Error.targetNotFound(path2)
+            )
         }
     }
 }

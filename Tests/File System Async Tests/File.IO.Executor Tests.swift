@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Async
 import Foundation
+import Testing
+
+@testable import File_System_Async
 
 extension File.System.Async.Test.Unit {
     @Suite("File.IO.Executor")
@@ -384,7 +385,9 @@ extension File.System.Async.Test.Unit {
             @Test("Worker count is respected - only N jobs run concurrently")
             func workerCountRespected() async throws {
                 let workerCount = 2
-                let executor = File.IO.Executor(.init(workers: workerCount, threadModel: .dedicated))
+                let executor = File.IO.Executor(
+                    .init(workers: workerCount, threadModel: .dedicated)
+                )
 
                 let concurrentCount = ManagedAtomic(0)
                 let maxConcurrent = ManagedAtomic(0)
@@ -396,7 +399,9 @@ extension File.System.Async.Test.Unit {
                         group.addTask {
                             try await executor.run {
                                 // Atomically increment and get new value
-                                let newCurrent = concurrentCount.wrappingIncrementThenLoad(ordering: .acquiringAndReleasing)
+                                let newCurrent = concurrentCount.wrappingIncrementThenLoad(
+                                    ordering: .acquiringAndReleasing
+                                )
 
                                 // Check if we exceeded worker count
                                 if newCurrent > workerCount {
@@ -419,7 +424,9 @@ extension File.System.Async.Test.Unit {
                                 Thread.sleep(forTimeInterval: 0.02)
 
                                 // Atomically decrement
-                                _ = concurrentCount.wrappingDecrementThenLoad(ordering: .acquiringAndReleasing)
+                                _ = concurrentCount.wrappingDecrementThenLoad(
+                                    ordering: .acquiringAndReleasing
+                                )
                             }
                         }
                     }
@@ -430,19 +437,27 @@ extension File.System.Async.Test.Unit {
                 let max = maxConcurrent.load(ordering: .acquiring)
                 let violationCount = violations.load(ordering: .acquiring)
 
-                #expect(max <= workerCount, "Max concurrent \(max) exceeded worker count \(workerCount)")
-                #expect(violationCount == 0, "Had \(violationCount) violations of worker count limit")
+                #expect(
+                    max <= workerCount,
+                    "Max concurrent \(max) exceeded worker count \(workerCount)"
+                )
+                #expect(
+                    violationCount == 0,
+                    "Had \(violationCount) violations of worker count limit"
+                )
 
                 await executor.shutdown()
             }
 
             @Test("Queue limit is enforced in dedicated mode")
             func queueLimitEnforcedDedicated() async throws {
-                let executor = File.IO.Executor(.init(
-                    workers: 1,
-                    queueLimit: 5,
-                    threadModel: .dedicated
-                ))
+                let executor = File.IO.Executor(
+                    .init(
+                        workers: 1,
+                        queueLimit: 5,
+                        threadModel: .dedicated
+                    )
+                )
 
                 let started = ManagedAtomic(false)
                 let blocker = ManagedAtomic(true)
@@ -500,14 +515,18 @@ extension File.System.Async.Test.Unit {
 
             @Test("Mixed mode operations - cooperative and dedicated executors are isolated")
             func mixedModeIsolation() async throws {
-                let cooperativeExecutor = File.IO.Executor(.init(
-                    workers: 2,
-                    threadModel: .cooperative
-                ))
-                let dedicatedExecutor = File.IO.Executor(.init(
-                    workers: 2,
-                    threadModel: .dedicated
-                ))
+                let cooperativeExecutor = File.IO.Executor(
+                    .init(
+                        workers: 2,
+                        threadModel: .cooperative
+                    )
+                )
+                let dedicatedExecutor = File.IO.Executor(
+                    .init(
+                        workers: 2,
+                        threadModel: .dedicated
+                    )
+                )
 
                 // Track execution
                 let cooperativeCount = ManagedAtomic(0)

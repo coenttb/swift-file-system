@@ -7,8 +7,9 @@
 
 import Foundation
 import Testing
-@testable import File_System_Primitives
 import TestingPerformance
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Performance {
 
@@ -45,7 +46,11 @@ extension File.System.Test.Performance {
 
             let oneMB = [UInt8](repeating: 0xCD, count: 1_000_000)
 
-            var handle = try File.Handle.open(filePath, mode: .write, options: [.create, .truncate, .closeOnExec])
+            var handle = try File.Handle.open(
+                filePath,
+                mode: .write,
+                options: [.create, .truncate, .closeOnExec]
+            )
             try oneMB.withUnsafeBufferPointer { buffer in
                 let span = Span<UInt8>(_unsafeElements: buffer)
                 try handle.write(span)
@@ -90,7 +95,11 @@ extension File.System.Test.Performance {
             let blocks = 256  // 1MB total
             let block = [UInt8](repeating: 0x55, count: blockSize)
 
-            var handle = try File.Handle.open(filePath, mode: .write, options: [.create, .truncate, .closeOnExec])
+            var handle = try File.Handle.open(
+                filePath,
+                mode: .write,
+                options: [.create, .truncate, .closeOnExec]
+            )
 
             for _ in 0..<blocks {
                 try block.withUnsafeBufferPointer { buffer in
@@ -249,7 +258,7 @@ extension File.System.Test.Performance {
             // Measure iteration
             var iterator = try File.Directory.Iterator.open(at: testDir)
             var count = 0
-            while let _ = try iterator.next() {
+            while try iterator.next() != nil {
                 count += 1
             }
             iterator.close()
@@ -374,7 +383,10 @@ extension File.System.Test.Performance {
     @Suite(.serialized)
     struct `Throughput` {
 
-        @Test("Large file write throughput (10MB)", .timed(iterations: 5, warmup: 1, threshold: .seconds(5)))
+        @Test(
+            "Large file write throughput (10MB)",
+            .timed(iterations: 5, warmup: 1, threshold: .seconds(5))
+        )
         func largeFileWrite() throws {
             let tempDir = try File.Path(NSTemporaryDirectory())
             let filePath = tempDir.appending("perf_large_write_\(UUID().uuidString).bin")
@@ -388,7 +400,10 @@ extension File.System.Test.Performance {
             }
         }
 
-        @Test("Large file read throughput (10MB)", .timed(iterations: 5, warmup: 1, threshold: .seconds(5)))
+        @Test(
+            "Large file read throughput (10MB)",
+            .timed(iterations: 5, warmup: 1, threshold: .seconds(5))
+        )
         func largeFileRead() throws {
             let tempDir = try File.Path(NSTemporaryDirectory())
             let filePath = tempDir.appending("perf_large_read_\(UUID().uuidString).bin")
@@ -405,7 +420,10 @@ extension File.System.Test.Performance {
             let _ = try File.System.Read.Full.read(from: filePath)
         }
 
-        @Test("Many small files (create/write/delete)", .timed(iterations: 5, warmup: 1, threshold: .seconds(10)))
+        @Test(
+            "Many small files (create/write/delete)",
+            .timed(iterations: 5, warmup: 1, threshold: .seconds(10))
+        )
         func manySmallFiles() throws {
             let tempDir = try File.Path(NSTemporaryDirectory())
             let testDir = tempDir.appending("perf_many_\(UUID().uuidString)")

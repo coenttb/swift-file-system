@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Async
 import Foundation
+import Testing
+
+@testable import File_System_Async
 
 extension File.System.Async.Test.Unit {
     @Suite("File.System.Async")
@@ -51,7 +52,7 @@ extension File.System.Async.Test.Unit {
             let system = File.System.Async()
             defer { Task { await system.io.shutdown() } }
 
-            let path = try File.Path.init("/tmp/non-existent-\(UUID().uuidString).txt")
+            let path = try File.Path("/tmp/non-existent-\(UUID().uuidString).txt")
             let exists = try await system.exists(path)
             #expect(!exists)
         }
@@ -92,7 +93,7 @@ extension File.System.Async.Test.Unit {
             let system = File.System.Async()
             defer { Task { await system.io.shutdown() } }
 
-            let path = try File.Path.init("/tmp/async-write-test-\(UUID().uuidString).txt")
+            let path = try File.Path("/tmp/async-write-test-\(UUID().uuidString).txt")
             defer { cleanup(path) }
 
             let content: [UInt8] = [100, 101, 102, 103]
@@ -111,7 +112,7 @@ extension File.System.Async.Test.Unit {
 
             let content: [UInt8] = [1, 2, 3]
             let source = try createTempFile(content: content)
-            let destination = try File.Path.init("/tmp/async-copy-dest-\(UUID().uuidString).txt")
+            let destination = try File.Path("/tmp/async-copy-dest-\(UUID().uuidString).txt")
             defer {
                 cleanup(source)
                 cleanup(destination)
@@ -135,7 +136,7 @@ extension File.System.Async.Test.Unit {
 
             let content: [UInt8] = [1, 2, 3]
             let source = try createTempFile(content: content)
-            let destination = try File.Path.init("/tmp/async-move-dest-\(UUID().uuidString).txt")
+            let destination = try File.Path("/tmp/async-move-dest-\(UUID().uuidString).txt")
             defer {
                 cleanup(source)
                 cleanup(destination)
@@ -175,7 +176,7 @@ extension File.System.Async.Test.Unit {
             let system = File.System.Async()
             defer { Task { await system.io.shutdown() } }
 
-            let path = try File.Path.init("/tmp/async-mkdir-test-\(UUID().uuidString)")
+            let path = try File.Path("/tmp/async-mkdir-test-\(UUID().uuidString)")
             defer { cleanup(path) }
 
             try await system.createDirectory(at: path)

@@ -5,9 +5,10 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Testing
-@testable import File_System_Primitives
 import Foundation
+import Testing
+
+@testable import File_System_Primitives
 
 extension File.System.Test.Unit {
     @Suite("File.Descriptor")
@@ -109,7 +110,11 @@ extension File.System.Test.Unit {
 
             let filePath = try File.Path(path)
             #expect(throws: File.Descriptor.Error.self) {
-                _ = try File.Descriptor.open(filePath, mode: .write, options: [.create, .exclusive])
+                _ = try File.Descriptor.open(
+                    filePath,
+                    mode: .write,
+                    options: [.create, .exclusive]
+                )
             }
         }
 
@@ -184,28 +189,28 @@ extension File.System.Test.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path.init("/tmp/missing")
+            let path = try File.Path("/tmp/missing")
             let error = File.Descriptor.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path.init("/root/secret")
+            let path = try File.Path("/root/secret")
             let error = File.Descriptor.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("alreadyExists error description")
         func alreadyExistsErrorDescription() throws {
-            let path = try File.Path.init("/tmp/existing")
+            let path = try File.Path("/tmp/existing")
             let error = File.Descriptor.Error.alreadyExists(path)
             #expect(error.description.contains("already exists"))
         }
 
         @Test("isDirectory error description")
         func isDirectoryErrorDescription() throws {
-            let path = try File.Path.init("/tmp")
+            let path = try File.Path("/tmp")
             let error = File.Descriptor.Error.isDirectory(path)
             #expect(error.description.contains("Is a directory"))
         }
@@ -245,11 +250,16 @@ extension File.System.Test.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path.init("/tmp/a")
-            let path2 = try File.Path.init("/tmp/a")
+            let path1 = try File.Path("/tmp/a")
+            let path2 = try File.Path("/tmp/a")
 
-            #expect(File.Descriptor.Error.pathNotFound(path1) == File.Descriptor.Error.pathNotFound(path2))
-            #expect(File.Descriptor.Error.tooManyOpenFiles == File.Descriptor.Error.tooManyOpenFiles)
+            #expect(
+                File.Descriptor.Error.pathNotFound(path1)
+                    == File.Descriptor.Error.pathNotFound(path2)
+            )
+            #expect(
+                File.Descriptor.Error.tooManyOpenFiles == File.Descriptor.Error.tooManyOpenFiles
+            )
             #expect(File.Descriptor.Error.alreadyClosed == File.Descriptor.Error.alreadyClosed)
         }
     }
