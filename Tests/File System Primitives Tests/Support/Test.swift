@@ -11,6 +11,7 @@ extension Test {
     @Suite(.serialized)
     struct `File System` {
         struct `Unit` {}
+        struct `EdgeCase` {}
 
         // Phase 2: Additional themed suites
         // @Suite(.serialized, .tags(.integration))
@@ -24,4 +25,5 @@ extension Test {
 extension Tag {
     @Tag static var integration: Self
     @Tag static var performance: Self
+    @Tag static var edgeCase: Self
 }
