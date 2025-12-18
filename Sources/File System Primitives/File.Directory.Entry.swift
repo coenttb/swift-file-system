@@ -17,6 +17,12 @@ extension File.Directory {
         /// The type of the entry.
         public let type: EntryType
 
+        /// Creates a directory entry.
+        ///
+        /// - Parameters:
+        ///   - name: The entry's filename (not the full path).
+        ///   - path: The full path to the entry.
+        ///   - type: The type of entry (file, directory, symlink, etc.).
         public init(name: String, path: File.Path, type: EntryType) {
             self.name = name
             self.path = path
@@ -26,9 +32,13 @@ extension File.Directory {
 
     /// The type of a directory entry.
     public enum EntryType: Sendable {
+        /// A regular file.
         case file
+        /// A directory (folder).
         case directory
+        /// A symbolic link pointing to another path.
         case symbolicLink
+        /// Block device, character device, socket, FIFO, or unknown type.
         case other
     }
 }

@@ -208,19 +208,35 @@ extension File.Path: ExpressibleByStringLiteral {
 // MARK: - Operators
 
 extension File.Path {
-    /// Appends a component to a path.
+    /// Appends a string component to a path.
+    ///
+    /// ```swift
+    /// let path: File.Path = "/usr/local"
+    /// let bin = path / "bin"  // "/usr/local/bin"
+    /// ```
     @inlinable
     public static func / (lhs: File.Path, rhs: String) -> File.Path {
         lhs.appending(rhs)
     }
 
-    /// Appends a component to a path.
+    /// Appends a validated component to a path.
+    ///
+    /// ```swift
+    /// let component = try File.Path.Component("config.json")
+    /// let path = basePath / component
+    /// ```
     @inlinable
     public static func / (lhs: File.Path, rhs: Component) -> File.Path {
         lhs.appending(rhs)
     }
 
     /// Appends a path to a path.
+    ///
+    /// ```swift
+    /// let base: File.Path = "/var/log"
+    /// let sub: File.Path = "app/errors"
+    /// let full = base / sub  // "/var/log/app/errors"
+    /// ```
     @inlinable
     public static func / (lhs: File.Path, rhs: File.Path) -> File.Path {
         lhs.appending(rhs)
