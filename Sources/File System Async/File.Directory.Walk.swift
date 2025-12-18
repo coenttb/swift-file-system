@@ -294,7 +294,8 @@ extension File.Directory.Async.WalkSequence {
         private static func getInode(_ path: File.Path, io: File.IO.Executor) async -> _InodeKey? {
             do {
                 return try await io.run {
-                    let info = try File.System.Stat.info(at: path)
+                    // Use lstat to get the symlink's own inode, not its target's
+                    let info = try File.System.Stat.lstatInfo(at: path)
                     return _InodeKey(device: info.deviceId, inode: info.inode)
                 }
             } catch {

@@ -18,11 +18,24 @@ import Musl
 @_spi(Internal) import StandardTime
 
 extension File.System.Stat {
-    /// Gets file info using POSIX stat.
+    /// Gets file info using POSIX stat (follows symlinks).
     internal static func _infoPOSIX(at path: File.Path) throws(Error) -> File.System.Metadata.Info {
         var statBuf = stat()
 
         guard stat(path.string, &statBuf) == 0 else {
+            throw _mapErrno(errno, path: path)
+        }
+
+        return _makeInfo(from: statBuf)
+    }
+
+    /// Gets file info using POSIX lstat (does not follow symlinks).
+    ///
+    /// Returns info about the symlink itself rather than its target.
+    internal static func _lstatInfoPOSIX(at path: File.Path) throws(Error) -> File.System.Metadata.Info {
+        var statBuf = stat()
+
+        guard lstat(path.string, &statBuf) == 0 else {
             throw _mapErrno(errno, path: path)
         }
 

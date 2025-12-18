@@ -34,7 +34,7 @@ extension File.System.Stat {
 // MARK: - Core API
 
 extension File.System.Stat {
-    /// Gets file metadata information.
+    /// Gets file metadata information (follows symlinks).
     ///
     /// - Parameter path: The path to stat.
     /// - Returns: File metadata information.
@@ -44,6 +44,23 @@ extension File.System.Stat {
         return try _infoWindows(at: path)
         #else
         return try _infoPOSIX(at: path)
+        #endif
+    }
+
+    /// Gets file metadata information without following symlinks.
+    ///
+    /// For symlinks, returns info about the link itself rather than its target.
+    /// Useful for cycle detection when walking directories with `followSymlinks`.
+    ///
+    /// - Parameter path: The path to stat.
+    /// - Returns: File metadata information for the link itself.
+    /// - Throws: `File.System.Stat.Error` on failure.
+    public static func lstatInfo(at path: File.Path) throws(Error) -> File.System.Metadata.Info {
+        #if os(Windows)
+        // Windows: GetFileAttributesEx doesn't follow symlinks by default
+        return try _infoWindows(at: path)
+        #else
+        return try _lstatInfoPOSIX(at: path)
         #endif
     }
 
