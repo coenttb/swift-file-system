@@ -40,7 +40,7 @@ extension Test.`File System`.Unit {
             let mode = handle.mode
             #expect(isValid)
             #expect(mode == .read)
-            handle.close()
+            try handle.close()
         }
 
         @Test("Open file for writing")
@@ -54,7 +54,7 @@ extension Test.`File System`.Unit {
             let mode = handle.mode
             #expect(isValid)
             #expect(mode == .write)
-            handle.close()
+            try handle.close()
         }
 
         @Test("Open file for read/write")
@@ -68,7 +68,7 @@ extension Test.`File System`.Unit {
             let mode = handle.mode
             #expect(isValid)
             #expect(mode == .readWrite)
-            handle.close()
+            try handle.close()
         }
 
         @Test("Open file for append")
@@ -82,7 +82,7 @@ extension Test.`File System`.Unit {
             let mode = handle.mode
             #expect(isValid)
             #expect(mode == .append)
-            handle.close()
+            try handle.close()
         }
 
         @Test("Open with create option")
@@ -95,7 +95,7 @@ extension Test.`File System`.Unit {
             let isValid = handle.isValid
             #expect(isValid)
             #expect(FileManager.default.fileExists(atPath: path))
-            handle.close()
+            try handle.close()
         }
 
         @Test("Open non-existing file throws pathNotFound")
@@ -121,7 +121,7 @@ extension Test.`File System`.Unit {
 
             let readData = try handle.read(count: 5)
             #expect(readData == content)
-            handle.close()
+            try handle.close()
         }
 
         @Test("Read partial bytes")
@@ -138,7 +138,7 @@ extension Test.`File System`.Unit {
 
             let secondPart = try handle.read(count: 5)
             #expect(secondPart == [6, 7, 8, 9, 10])
-            handle.close()
+            try handle.close()
         }
 
         @Test("Read at EOF returns empty")
@@ -153,7 +153,7 @@ extension Test.`File System`.Unit {
             _ = try handle.read(count: 3) // Read all
             let atEOF = try handle.read(count: 10)
             #expect(atEOF.isEmpty)
-            handle.close()
+            try handle.close()
         }
 
         @Test("Read more than available returns available")
@@ -167,7 +167,7 @@ extension Test.`File System`.Unit {
 
             let readData = try handle.read(count: 100)
             #expect(readData == content)
-            handle.close()
+            try handle.close()
         }
 
         // MARK: - Writing
@@ -185,7 +185,7 @@ extension Test.`File System`.Unit {
                 let span = Span<UInt8>(_unsafeElements: buffer)
                 try handle.write(span)
             }
-            handle.close()
+            try handle.close()
 
             let readBack = try [UInt8](Data(contentsOf: URL(fileURLWithPath: path)))
             #expect(readBack == data)
@@ -204,7 +204,7 @@ extension Test.`File System`.Unit {
                 let span = Span<UInt8>(_unsafeElements: buffer)
                 try handle.write(span)
             }
-            handle.close()
+            try handle.close()
 
             let readBack = try Data(contentsOf: URL(fileURLWithPath: path))
             #expect(readBack.isEmpty)
@@ -226,7 +226,7 @@ extension Test.`File System`.Unit {
 
             let readData = try handle.read(count: 3)
             #expect(readData == [6, 7, 8])
-            handle.close()
+            try handle.close()
         }
 
         @Test("Seek from current")
@@ -244,7 +244,7 @@ extension Test.`File System`.Unit {
 
             let readData = try handle.read(count: 1)
             #expect(readData == [6])
-            handle.close()
+            try handle.close()
         }
 
         @Test("Seek from end")
@@ -261,7 +261,7 @@ extension Test.`File System`.Unit {
 
             let readData = try handle.read(count: 3)
             #expect(readData == [8, 9, 10])
-            handle.close()
+            try handle.close()
         }
 
         @Test("Get current position")
@@ -278,7 +278,7 @@ extension Test.`File System`.Unit {
             _ = try handle.read(count: 3)
             let pos2 = try handle.position()
             #expect(pos2 == 3)
-            handle.close()
+            try handle.close()
         }
 
         // MARK: - Sync
@@ -297,7 +297,7 @@ extension Test.`File System`.Unit {
                 try handle.write(span)
             }
             try handle.sync()
-            handle.close()
+            try handle.close()
 
             // File should exist and have content
             #expect(FileManager.default.fileExists(atPath: path))

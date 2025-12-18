@@ -74,10 +74,10 @@ extension File.Handle {
         var handle = try open(path, mode: mode, options: options)
         do {
             let result = try body(&handle)
-            handle.close()
+            try? handle.close()  // Best-effort close after success
             return result
         } catch {
-            handle.close()
+            try? handle.close()  // Best-effort close after error
             throw error
         }
     }
@@ -102,10 +102,10 @@ extension File.Handle {
         var handle = try open(path, mode: mode, options: options)
         do {
             let result = try await body(&handle)
-            handle.close()
+            try? handle.close()  // Best-effort close after success
             return result
         } catch {
-            handle.close()
+            try? handle.close()  // Best-effort close after error
             throw error
         }
     }

@@ -20,23 +20,28 @@ extension File.Directory {
     ///
     /// This is a ~Copyable type that owns the underlying directory handle
     /// and closes it when done.
-    public struct Iterator: ~Copyable, Sendable {
+    ///
+    /// ## Thread Safety
+    /// `Iterator` is **NOT** `Sendable`. It owns mutable state (the directory handle)
+    /// and is not safe for concurrent use. For cross-task usage, wrap in an actor
+    /// or use the async layer.
+    public struct Iterator: ~Copyable /* NOT Sendable - owns mutable directory handle */ {
         #if os(Windows)
-        private var _handle: UnsafeSendable<HANDLE?>
+        private var _handle: HANDLE?
         private var _findData: WIN32_FIND_DATAW
         private var _hasMore: Bool
         #else
-        private var _dir: UnsafeSendable<UnsafeMutablePointer<DIR>?>
+        private var _dir: UnsafeMutablePointer<DIR>?
         #endif
         private let _basePath: File.Path
 
         deinit {
             #if os(Windows)
-            if let handle = _handle.value, handle != INVALID_HANDLE_VALUE {
+            if let handle = _handle, handle != INVALID_HANDLE_VALUE {
                 FindClose(handle)
             }
             #else
-            if let dir = _dir.value {
+            if let dir = _dir {
                 closedir(dir)
             }
             #endif
@@ -87,14 +92,14 @@ extension File.Directory.Iterator {
     /// Closes the iterator and releases resources.
     public consuming func close() {
         #if os(Windows)
-        if let handle = _handle.value, handle != INVALID_HANDLE_VALUE {
+        if let handle = _handle, handle != INVALID_HANDLE_VALUE {
             FindClose(handle)
-            _handle = UnsafeSendable(INVALID_HANDLE_VALUE)
+            _handle = INVALID_HANDLE_VALUE
         }
         #else
-        if let dir = _dir.value {
+        if let dir = _dir {
             closedir(dir)
-            _dir = UnsafeSendable(nil)
+            _dir = nil
         }
         #endif
     }
@@ -120,13 +125,13 @@ extension File.Directory.Iterator {
         }
 
         return File.Directory.Iterator(
-            _dir: UnsafeSendable(dir),
+            _dir: dir,
             _basePath: path
         )
     }
 
     private mutating func _nextPOSIX() throws(Error) -> File.Directory.Entry? {
-        guard let dir = _dir.value else {
+        guard let dir = _dir else {
             return nil
         }
 
@@ -230,7 +235,7 @@ extension File.Directory.Iterator {
         }
 
         return File.Directory.Iterator(
-            _handle: UnsafeSendable(handle),
+            _handle: handle,
             _findData: findData,
             _hasMore: true,
             _basePath: path
@@ -238,7 +243,7 @@ extension File.Directory.Iterator {
     }
 
     private mutating func _nextWindows() throws(Error) -> File.Directory.Entry? {
-        guard let handle = _handle.value, handle != INVALID_HANDLE_VALUE, _hasMore else {
+        guard let handle = _handle, handle != INVALID_HANDLE_VALUE, _hasMore else {
             return nil
         }
 

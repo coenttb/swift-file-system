@@ -58,6 +58,7 @@ extension File.Handle {
         case alreadyExists(File.Path)
         case isDirectory(File.Path)
         case invalidHandle
+        case alreadyClosed
         case seekFailed(errno: Int32, message: String)
         case readFailed(errno: Int32, message: String)
         case writeFailed(errno: Int32, message: String)
@@ -190,6 +191,32 @@ extension File.Handle {
         return buffer
     }
 
+    /// Reads bytes into a caller-provided buffer.
+    ///
+    /// This is the canonical zero-allocation read API. Callers provide the destination buffer.
+    ///
+    /// - Parameter buffer: Destination buffer. Must remain valid for duration of call.
+    /// - Returns: Number of bytes read (0 at EOF).
+    /// - Note: May return fewer bytes than buffer size (partial read).
+    public mutating func read(into buffer: UnsafeMutableRawBufferPointer) throws(Error) -> Int {
+        guard _descriptor.isValid else { throw .invalidHandle }
+        guard !buffer.isEmpty else { return 0 }
+
+        #if os(Windows)
+        var bytesRead: DWORD = 0
+        guard ReadFile(_descriptor.rawHandle!, buffer.baseAddress, DWORD(buffer.count), &bytesRead, nil) else {
+            throw .readFailed(errno: Int32(GetLastError()), message: "ReadFile failed")
+        }
+        return Int(bytesRead)
+        #else
+        let result = Darwin.read(_descriptor.rawValue, buffer.baseAddress!, buffer.count)
+        if result < 0 {
+            throw .readFailed(errno: errno, message: String(cString: strerror(errno)))
+        }
+        return result
+        #endif
+    }
+
     /// Writes bytes to the file.
     ///
     /// - Parameter bytes: The bytes to write.
@@ -206,10 +233,17 @@ extension File.Handle {
             guard let base = buffer.baseAddress else { return }
 
             #if os(Windows)
-            var written: DWORD = 0
-            let success = WriteFile(_descriptor.rawHandle!, base, DWORD(count), &written, nil)
-            guard success && written == count else {
-                throw .writeFailed(errno: Int32(GetLastError()), message: "WriteFile failed")
+            // Loop for partial writes - WriteFile may return fewer bytes than requested
+            var totalWritten: Int = 0
+            while totalWritten < count {
+                var written: DWORD = 0
+                let remaining = count - totalWritten
+                let ptr = base.advanced(by: totalWritten)
+                let success = WriteFile(_descriptor.rawHandle!, ptr, DWORD(remaining), &written, nil)
+                guard success else {
+                    throw .writeFailed(errno: Int32(GetLastError()), message: "WriteFile failed")
+                }
+                totalWritten += Int(written)
             }
             #else
             var totalWritten = 0
@@ -300,8 +334,26 @@ extension File.Handle {
     }
 
     /// Closes the handle.
-    public consuming func close() {
-        // The descriptor's deinit will close it
+    ///
+    /// - Postcondition: `isValid == false`
+    /// - Idempotent: second close throws `.alreadyClosed`
+    /// - Throws: `File.Handle.Error` on close failure
+    public consuming func close() throws(Error) {
+        guard _descriptor.isValid else {
+            throw .alreadyClosed
+        }
+        do {
+            try _descriptor.close()
+        } catch let error {
+            switch error {
+            case .alreadyClosed:
+                throw .alreadyClosed
+            case .closeFailed(let errno, let message):
+                throw .closeFailed(errno: errno, message: message)
+            default:
+                throw .closeFailed(errno: 0, message: "\(error)")
+            }
+        }
     }
 }
 
@@ -329,6 +381,8 @@ extension File.Handle.Error: CustomStringConvertible {
             return "Is a directory: \(path)"
         case .invalidHandle:
             return "Invalid file handle"
+        case .alreadyClosed:
+            return "Handle already closed"
         case .seekFailed(let errno, let message):
             return "Seek failed: \(message) (errno=\(errno))"
         case .readFailed(let errno, let message):

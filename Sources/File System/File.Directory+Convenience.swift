@@ -105,21 +105,8 @@ extension File.Directory {
         }
     }
 
-    /// Returns an async sequence of directory entries.
-    ///
-    /// This provides lazy iteration over directory contents.
-    ///
-    /// ## Example
-    /// ```swift
-    /// for try await entry in dir.entries() {
-    ///     print(entry.name)
-    /// }
-    /// ```
-    ///
-    /// - Returns: An async sequence of directory entries.
-    public func entries() -> File.Directory.Entries {
-        File.Directory.Entries(at: path)
-    }
+    // Note: Async directory streaming (entries()) is available in the File System Async layer
+    // via File.Async.Directory.Entries
 }
 
 // MARK: - Subscript Access

@@ -13,9 +13,11 @@ let package = Package(
     products: [
         // Only File System is public; Primitives is internal
         .library(name: "File System", targets: ["File System"]),
+        .library(name: "File System Async", targets: ["File System Async"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-system", from: "1.4.0"),
+        .package(url: "https://github.com/apple/swift-async-algorithms", from: "1.0.0"),
         .package(url: "https://github.com/swift-standards/swift-standards", from: "0.17.0"),
         .package(url: "https://github.com/swift-standards/swift-incits-4-1986", from: "0.7.0"),
         .package(url: "https://github.com/swift-standards/swift-rfc-4648", from: "0.5.0"),
@@ -52,6 +54,21 @@ let package = Package(
                 "File System",
             ],
             path: "Tests/File System Tests"
+        ),
+        .target(
+            name: "File System Async",
+            dependencies: [
+                "File System Primitives",
+                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
+            ],
+            path: "Sources/File System Async"
+        ),
+        .testTarget(
+            name: "File System Async Tests",
+            dependencies: [
+                "File System Async",
+            ],
+            path: "Tests/File System Async Tests"
         ),
     ],
     swiftLanguageModes: [.v6]
