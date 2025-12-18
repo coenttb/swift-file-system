@@ -5,7 +5,13 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-public import Foundation
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif os(Windows)
+import WinSDK
+#endif
 
 extension File {
     /// Namespace for I/O coordination.
@@ -26,7 +32,15 @@ extension File.IO {
 
         /// Default number of workers based on system resources.
         public static var defaultWorkerCount: Int {
-            ProcessInfo.processInfo.activeProcessorCount
+            #if canImport(Darwin)
+            return Int(sysconf(_SC_NPROCESSORS_ONLN))
+            #elseif canImport(Glibc)
+            return Int(sysconf(Int32(_SC_NPROCESSORS_ONLN)))
+            #elseif os(Windows)
+            return Int(GetActiveProcessorCount(ALL_PROCESSOR_GROUPS))
+            #else
+            return 4  // Fallback for unknown platforms
+            #endif
         }
 
         /// Creates a configuration.

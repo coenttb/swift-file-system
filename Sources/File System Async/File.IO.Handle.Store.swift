@@ -5,21 +5,27 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Foundation
+import Synchronization
 
 // MARK: - Atomic Counter
 
-/// Simple thread-safe counter for generating unique IDs.
+/// Thread-safe counter for generating unique IDs.
+///
+/// ## Safety Invariant
+/// All mutations of `value` occur inside `withLock`, ensuring exclusive access.
 final class _AtomicCounter: @unchecked Sendable {
-    private var value: UInt64 = 0
-    private let lock = NSLock()
+    private let state: Mutex<UInt64>
+
+    init() {
+        self.state = Mutex(0)
+    }
 
     func next() -> UInt64 {
-        lock.lock()
-        defer { lock.unlock() }
-        let result = value
-        value += 1
-        return result
+        state.withLock { value in
+            let result = value
+            value += 1
+            return result
+        }
     }
 }
 
@@ -64,15 +70,21 @@ extension File.IO {
     /// - Stable storage address (dictionary rehashing doesn't invalidate inout)
     /// - Safe concurrent access patterns
     ///
-    /// ## Implementation Note
-    /// Uses `UnsafeMutablePointer` for storage because Swift 6 does not allow
-    /// moving a ~Copyable value out of a class stored property. The pointer
-    /// provides a stable address for inout access.
+    /// ## Safety Invariant (for @unchecked Sendable)
+    /// - All access to `storage` occurs within `state.withLock { }`.
+    /// - The `UnsafeMutablePointer` provides a stable address for inout access
+    ///   to the ~Copyable File.Handle.
+    /// - No closure passed to withLock is async or escaping.
     final class HandleBox: @unchecked Sendable {
-        /// Lock protecting the handle.
-        private let lock = NSLock()
-        /// Pointer to the handle storage. Nil means closed.
+        /// State protecting the handle storage.
+        /// - `true`: handle is open (storage is valid)
+        /// - `false`: handle is closed (storage is nil)
+        private let state: Mutex<Bool>
+
+        /// Pointer to the handle storage. Only accessed under state lock.
+        /// Nil means closed.
         private var storage: UnsafeMutablePointer<File.Handle>?
+
         /// The path (for diagnostics).
         let path: File.Path
         /// The mode (for diagnostics).
@@ -84,12 +96,14 @@ extension File.IO {
             // Allocate and initialize storage
             self.storage = .allocate(capacity: 1)
             self.storage!.initialize(to: consume handle)
+            self.state = Mutex(true)
         }
 
         deinit {
-            // If storage still exists, we need to clean up
+            // If storage still exists, we need to clean up.
+            // Note: Close errors are intentionally discarded in deinit
+            // (deinit is leak prevention only).
             if let ptr = storage {
-                // Move out and close
                 let handle = ptr.move()
                 ptr.deallocate()
                 _ = try? handle.close()
@@ -98,26 +112,23 @@ extension File.IO {
 
         /// Whether the handle is still open.
         var isOpen: Bool {
-            lock.lock()
-            defer { lock.unlock() }
-            return storage != nil
+            state.withLock { $0 }
         }
 
         /// Execute a closure with exclusive access to the handle.
         ///
         /// - Parameter body: Closure receiving inout access to the handle.
+        ///   Must be synchronous and non-escaping.
         /// - Returns: The result of the closure.
         /// - Throws: `HandleError.handleClosed` if handle was already closed.
         func withHandle<T>(_ body: (inout File.Handle) throws -> T) throws -> T {
-            lock.lock()
-            defer { lock.unlock() }
-
-            guard let ptr = storage else {
-                throw HandleError.handleClosed
+            try state.withLock { isOpen in
+                guard isOpen, let ptr = storage else {
+                    throw HandleError.handleClosed
+                }
+                // Access via pointer - stable address, no move required
+                return try body(&ptr.pointee)
             }
-
-            // Access via pointer - stable address, no move required
-            return try body(&ptr.pointee)
         }
 
         /// Close the handle and return any error.
@@ -125,17 +136,24 @@ extension File.IO {
         /// - Returns: The close error, if any.
         /// - Note: Idempotent - second call returns nil.
         func close() -> (any Error)? {
-            lock.lock()
-            defer { lock.unlock() }
-
-            guard let ptr = storage else {
-                return nil  // Already closed
+            // First, atomically mark as closed and get storage
+            let ptr: UnsafeMutablePointer<File.Handle>? = state.withLock { isOpen in
+                guard isOpen, let ptr = storage else {
+                    return nil  // Already closed
+                }
+                isOpen = false
+                storage = nil
+                return ptr
             }
 
-            // Move out, deallocate, close
+            // If already closed, return nil
+            guard let ptr else {
+                return nil
+            }
+
+            // Move out, deallocate, close (outside lock)
             let handle = ptr.move()
             ptr.deallocate()
-            storage = nil
 
             do {
                 try handle.close()
@@ -147,6 +165,20 @@ extension File.IO {
     }
 }
 
+// MARK: - Handle Store State
+
+extension File.IO {
+    /// Internal state protected by the store's mutex.
+    struct HandleStoreState: ~Copyable {
+        /// The handle storage.
+        var handles: [HandleID: HandleBox] = [:]
+        /// Counter for generating unique IDs.
+        var nextID: UInt64 = 0
+        /// Whether the store has been shut down.
+        var isShutdown: Bool = false
+    }
+}
+
 // MARK: - Handle Store
 
 extension File.IO {
@@ -154,24 +186,24 @@ extension File.IO {
     ///
     /// ## Design
     /// - Dictionary maps HandleID → HandleBox
-    /// - Dictionary lock guards map mutations only
+    /// - Store mutex guards map mutations and shutdown state
     /// - Per-handle locks (in HandleBox) guard handle operations
     /// - This enables parallelism across different handles
+    ///
+    /// ## Safety Invariant (for @unchecked Sendable)
+    /// - All mutation of `state` contents occurs inside `state.withLock { }`.
+    /// - Boxes are never returned to users; only accessed inside io.run jobs.
+    /// - No closure passed to withLock is async or escaping.
     ///
     /// ## Lifecycle
     /// - Store lifetime = Executor lifetime
     /// - Shutdown forcibly closes remaining handles
     final class HandleStore: @unchecked Sendable {
-        /// Lock protecting the dictionary.
-        private let mapLock = NSLock()
-        /// The handle storage.
-        private var handles: [HandleID: HandleBox] = [:]
-        /// Counter for generating unique IDs.
-        private var nextID: UInt64 = 0
+        /// Protected state containing dictionary and metadata.
+        private let state: Mutex<HandleStoreState>
+
         /// Unique scope identifier for this store instance.
         let scope: UInt64
-        /// Whether the store has been shut down.
-        private var isShutdown: Bool = false
 
         /// Global counter for generating unique scope IDs.
         private static let scopeCounter = _AtomicCounter()
@@ -179,6 +211,7 @@ extension File.IO {
         init() {
             // Generate a unique scope ID for this store instance
             self.scope = Self.scopeCounter.next()
+            self.state = Mutex(HandleStoreState())
         }
 
         /// Register a handle and return its ID.
@@ -186,23 +219,43 @@ extension File.IO {
         /// - Parameter handle: The handle to register (ownership transferred).
         /// - Returns: The handle ID for future operations.
         /// - Throws: `ExecutorError.shutdownInProgress` if store is shut down.
+        ///
+        /// ## Implementation Note
+        /// The handle is consumed outside the lock because `Mutex.withLock` takes
+        /// an escaping closure, and noncopyable types cannot be consumed inside
+        /// escaping closures. We use a two-phase approach:
+        /// 1. Quick check if shutdown in progress (return early if so)
+        /// 2. Create HandleBox (consumes handle)
+        /// 3. Atomically register under lock (with double-check for shutdown race)
+        ///
+        /// If shutdown races between phase 1 and 3, the HandleBox's deinit will
+        /// close the handle as a safety net.
         func register(_ handle: consuming File.Handle) throws -> HandleID {
-            mapLock.lock()
-            defer { mapLock.unlock() }
+            let scope = self.scope
 
-            guard !isShutdown else {
-                // Close the handle we were given since we can't store it
+            // Phase 1: Quick shutdown check (avoid creating box if already shutdown)
+            let alreadyShutdown = state.withLock { $0.isShutdown }
+            if alreadyShutdown {
                 _ = try? handle.close()
                 throw ExecutorError.shutdownInProgress
             }
 
-            let id = HandleID(raw: nextID, scope: scope)
-            nextID += 1
-
+            // Phase 2: Create box (consumes handle) - outside lock
             let box = HandleBox(handle)
-            handles[id] = box
 
-            return id
+            // Phase 3: Atomically register (with double-check)
+            return try state.withLock { state in
+                guard !state.isShutdown else {
+                    // Race: shutdown started after our check
+                    // box.deinit will close the handle
+                    throw ExecutorError.shutdownInProgress
+                }
+
+                let id = HandleID(raw: state.nextID, scope: scope)
+                state.nextID += 1
+                state.handles[id] = box
+                return id
+            }
         }
 
         /// Execute a closure with exclusive access to a handle.
@@ -220,16 +273,16 @@ extension File.IO {
                 throw HandleError.scopeMismatch
             }
 
-            // Find the box (short lock)
-            mapLock.lock()
-            let box = handles[id]
-            mapLock.unlock()
+            // Find the box (short lock on dictionary)
+            let box: HandleBox? = state.withLock { state in
+                state.handles[id]
+            }
 
             guard let box else {
                 throw HandleError.invalidHandleID
             }
 
-            // Execute with per-handle lock
+            // Execute with per-handle lock (box has its own Mutex)
             return try box.withHandle(body)
         }
 
@@ -246,9 +299,9 @@ extension File.IO {
             }
 
             // Remove from dictionary (short lock)
-            mapLock.lock()
-            let box = handles.removeValue(forKey: id)
-            mapLock.unlock()
+            let box: HandleBox? = state.withLock { state in
+                state.handles.removeValue(forKey: id)
+            }
 
             // If not found, treat as already closed (idempotent)
             guard let box else {
@@ -266,13 +319,15 @@ extension File.IO {
         /// - Note: Close errors are logged but not propagated.
         /// - Postcondition: All handles closed, store rejects new registrations.
         func shutdown() {
-            mapLock.lock()
-            isShutdown = true
-            let remainingHandles = handles
-            handles.removeAll()
-            mapLock.unlock()
+            // Atomically mark shutdown and extract remaining handles
+            let remainingHandles: [HandleID: HandleBox] = state.withLock { state in
+                state.isShutdown = true
+                let handles = state.handles
+                state.handles.removeAll()
+                return handles
+            }
 
-            // Close all remaining handles (best-effort)
+            // Close all remaining handles (best-effort, outside lock)
             for (id, box) in remainingHandles {
                 if let error = box.close() {
                     #if DEBUG
@@ -285,16 +340,16 @@ extension File.IO {
         /// Check if a handle ID is valid (for diagnostics).
         func isValid(_ id: HandleID) -> Bool {
             guard id.scope == scope else { return false }
-            mapLock.lock()
-            defer { mapLock.unlock() }
-            return handles[id] != nil
+            return state.withLock { state in
+                state.handles[id] != nil
+            }
         }
 
         /// The number of registered handles (for testing).
         var count: Int {
-            mapLock.lock()
-            defer { mapLock.unlock() }
-            return handles.count
+            state.withLock { state in
+                state.handles.count
+            }
         }
     }
 }

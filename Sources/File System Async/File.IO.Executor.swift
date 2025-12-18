@@ -5,8 +5,6 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
-import Foundation
-
 // MARK: - Executor Errors
 
 extension File.IO {
