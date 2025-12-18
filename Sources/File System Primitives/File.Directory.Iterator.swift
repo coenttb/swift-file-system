@@ -30,8 +30,11 @@ extension File.Directory {
             private var _handle: HANDLE?
             private var _findData: WIN32_FIND_DATAW
             private var _hasMore: Bool
-        #else
+        #elseif canImport(Darwin)
             private var _dir: UnsafeMutablePointer<DIR>?
+        #elseif canImport(Glibc)
+            // Use OpaquePointer on Linux (DIR type not exported in Swift's Glibc overlay)
+            private var _dir: OpaquePointer?
         #endif
         private let _basePath: File.Path
 
@@ -40,9 +43,13 @@ extension File.Directory {
                 if let handle = _handle, handle != INVALID_HANDLE_VALUE {
                     FindClose(handle)
                 }
-            #else
+            #elseif canImport(Darwin)
                 if let dir = _dir {
                     closedir(dir)
+                }
+            #elseif canImport(Glibc)
+                if let dir = _dir {
+                    Glibc.closedir(dir)
                 }
             #endif
         }
@@ -96,9 +103,14 @@ extension File.Directory.Iterator {
                 FindClose(handle)
                 _handle = INVALID_HANDLE_VALUE
             }
-        #else
+        #elseif canImport(Darwin)
             if let dir = _dir {
                 closedir(dir)
+                _dir = nil
+            }
+        #elseif canImport(Glibc)
+            if let dir = _dir {
+                Glibc.closedir(dir)
                 _dir = nil
             }
         #endif
@@ -107,7 +119,7 @@ extension File.Directory.Iterator {
 
 // MARK: - POSIX Implementation
 
-#if !os(Windows)
+#if canImport(Darwin)
     extension File.Directory.Iterator {
         private static func _openPOSIX(at path: File.Path) throws(Error) -> File.Directory.Iterator
         {
@@ -149,34 +161,99 @@ extension File.Directory.Iterator {
 
                 // Determine type
                 let entryType: File.Directory.EntryType
-                #if canImport(Darwin)
-                    switch Int32(entry.pointee.d_type) {
-                    case DT_REG:
+                switch Int32(entry.pointee.d_type) {
+                case DT_REG:
+                    entryType = .file
+                case DT_DIR:
+                    entryType = .directory
+                case DT_LNK:
+                    entryType = .symbolicLink
+                default:
+                    entryType = .other
+                }
+
+                return File.Directory.Entry(name: name, path: entryPath, type: entryType)
+            }
+
+            return nil
+        }
+
+        private static func _mapErrno(_ errno: Int32, path: File.Path) -> Error {
+            switch errno {
+            case ENOENT:
+                return .pathNotFound(path)
+            case EACCES, EPERM:
+                return .permissionDenied(path)
+            case ENOTDIR:
+                return .notADirectory(path)
+            default:
+                let message: String
+                if let cString = strerror(errno) {
+                    message = String(cString: cString)
+                } else {
+                    message = "Unknown error"
+                }
+                return .readFailed(errno: errno, message: message)
+            }
+        }
+    }
+#elseif canImport(Glibc)
+    extension File.Directory.Iterator {
+        private static func _openPOSIX(at path: File.Path) throws(Error) -> File.Directory.Iterator
+        {
+            // Verify it's a directory
+            var statBuf = stat()
+            guard stat(path.string, &statBuf) == 0 else {
+                throw _mapErrno(errno, path: path)
+            }
+
+            guard (statBuf.st_mode & S_IFMT) == S_IFDIR else {
+                throw .notADirectory(path)
+            }
+
+            guard let dir = Glibc.opendir(path.string) else {
+                throw _mapErrno(errno, path: path)
+            }
+
+            return File.Directory.Iterator(
+                _dir: dir,
+                _basePath: path
+            )
+        }
+
+        private mutating func _nextPOSIX() throws(Error) -> File.Directory.Entry? {
+            guard let dir = _dir else {
+                return nil
+            }
+
+            while let entry = Glibc.readdir(dir) {
+                let name = String(posixDirectoryEntryName: entry.pointee.d_name)
+
+                // Skip . and ..
+                if name == "." || name == ".." {
+                    continue
+                }
+
+                // Build full path using proper path composition
+                let entryPath = _basePath.appending(name)
+
+                // Determine type via lstat (Glibc doesn't reliably expose d_type)
+                let entryType: File.Directory.EntryType
+                var entryStat = stat()
+                if Glibc.lstat(entryPath.string, &entryStat) == 0 {
+                    switch entryStat.st_mode & S_IFMT {
+                    case S_IFREG:
                         entryType = .file
-                    case DT_DIR:
+                    case S_IFDIR:
                         entryType = .directory
-                    case DT_LNK:
+                    case S_IFLNK:
                         entryType = .symbolicLink
                     default:
                         entryType = .other
                     }
-                #else
-                    var entryStat = stat()
-                    if lstat(entryPath.string, &entryStat) == 0 {
-                        switch entryStat.st_mode & S_IFMT {
-                        case S_IFREG:
-                            entryType = .file
-                        case S_IFDIR:
-                            entryType = .directory
-                        case S_IFLNK:
-                            entryType = .symbolicLink
-                        default:
-                            entryType = .other
-                        }
-                    } else {
-                        entryType = .other
-                    }
-                #endif
+                } else {
+                    entryType = .other
+                }
 
                 return File.Directory.Entry(name: name, path: entryPath, type: entryType)
             }

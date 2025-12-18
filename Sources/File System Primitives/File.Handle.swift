@@ -181,10 +181,21 @@ extension File.Handle {
             if Int(bytesRead) < count {
                 buffer.removeLast(count - Int(bytesRead))
             }
-        #else
+        #elseif canImport(Darwin)
             let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
                 guard let base = ptr.baseAddress else { return 0 }
                 return Darwin.read(_descriptor.rawValue, base, count)
+            }
+            if bytesRead < 0 {
+                throw .readFailed(errno: errno, message: String(cString: strerror(errno)))
+            }
+            if bytesRead < count {
+                buffer.removeLast(count - bytesRead)
+            }
+        #elseif canImport(Glibc)
+            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
+                guard let base = ptr.baseAddress else { return 0 }
+                return Glibc.read(_descriptor.rawValue, base, count)
             }
             if bytesRead < 0 {
                 throw .readFailed(errno: errno, message: String(cString: strerror(errno)))
@@ -222,8 +233,14 @@ extension File.Handle {
                 throw .readFailed(errno: Int32(GetLastError()), message: "ReadFile failed")
             }
             return Int(bytesRead)
-        #else
+        #elseif canImport(Darwin)
             let result = Darwin.read(_descriptor.rawValue, buffer.baseAddress!, buffer.count)
+            if result < 0 {
+                throw .readFailed(errno: errno, message: String(cString: strerror(errno)))
+            }
+            return result
+        #elseif canImport(Glibc)
+            let result = Glibc.read(_descriptor.rawValue, buffer.baseAddress!, buffer.count)
             if result < 0 {
                 throw .readFailed(errno: errno, message: String(cString: strerror(errno)))
             }
