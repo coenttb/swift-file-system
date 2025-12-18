@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Metadata.Ownership")
     struct MetadataOwnership {
 
@@ -57,7 +57,7 @@ extension Test.`File System`.Unit {
         @Test("Get ownership of system file")
         func getOwnershipOfSystemFile() throws {
             // /etc/passwd should be owned by root (uid 0)
-            let filePath = try File.Path("/etc/passwd")
+            let filePath = try File.Path.init("/etc/passwd")
             let ownership = try File.System.Metadata.Ownership.get(at: filePath)
 
             #expect(ownership.uid == 0)
@@ -109,14 +109,14 @@ extension Test.`File System`.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing")
+            let path = try File.Path.init("/tmp/missing")
             let error = File.System.Metadata.Ownership.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/secret")
+            let path = try File.Path.init("/root/secret")
             let error = File.System.Metadata.Ownership.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }

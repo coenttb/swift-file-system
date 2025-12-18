@@ -19,7 +19,7 @@ extension File {
     ///
     /// ## Example
     /// ```swift
-    /// let path = try File.Path("/usr/local/bin")
+    /// let path = try File.Path.init("/usr/local/bin")
     /// let child = path / "swift"
     /// print(child.string)  // "/usr/local/bin/swift"
     /// ```

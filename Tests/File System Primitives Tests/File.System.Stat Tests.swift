@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Stat")
     struct Stat {
 
@@ -53,7 +53,7 @@ extension Test.`File System`.Unit {
 
         @Test("exists returns false for non-existing path")
         func existsReturnsFalseForNonExisting() throws {
-            let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
+            let filePath = try File.Path.init("/tmp/non-existing-\(UUID().uuidString)")
             #expect(File.System.Stat.exists(at: filePath) == false)
         }
 
@@ -79,7 +79,7 @@ extension Test.`File System`.Unit {
 
         @Test("isFile returns false for non-existing path")
         func isFileReturnsFalseForNonExisting() throws {
-            let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
+            let filePath = try File.Path.init("/tmp/non-existing-\(UUID().uuidString)")
             #expect(File.System.Stat.isFile(at: filePath) == false)
         }
 
@@ -105,7 +105,7 @@ extension Test.`File System`.Unit {
 
         @Test("isDirectory returns false for non-existing path")
         func isDirectoryReturnsFalseForNonExisting() throws {
-            let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
+            let filePath = try File.Path.init("/tmp/non-existing-\(UUID().uuidString)")
             #expect(File.System.Stat.isDirectory(at: filePath) == false)
         }
 
@@ -189,7 +189,7 @@ extension Test.`File System`.Unit {
 
         @Test("info throws for non-existing path")
         func infoThrowsForNonExisting() throws {
-            let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
+            let filePath = try File.Path.init("/tmp/non-existing-\(UUID().uuidString)")
 
             #expect(throws: File.System.Stat.Error.self) {
                 try File.System.Stat.info(at: filePath)
@@ -242,14 +242,14 @@ extension Test.`File System`.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/non-existing")
+            let path = try File.Path.init("/tmp/non-existing")
             let error = File.System.Stat.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/restricted")
+            let path = try File.Path.init("/root/restricted")
             let error = File.System.Stat.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
@@ -265,8 +265,8 @@ extension Test.`File System`.Unit {
 
         @Test("lstatInfo returns symbolicLink type for symlink")
         func lstatInfoReturnsSymlinkType() throws {
-            let targetPath = try File.Path("/tmp/stat-lstat-target-\(UUID().uuidString).txt")
-            let linkPath = try File.Path("/tmp/stat-lstat-test-\(UUID().uuidString)")
+            let targetPath = try File.Path.init("/tmp/stat-lstat-target-\(UUID().uuidString).txt")
+            let linkPath = try File.Path.init("/tmp/stat-lstat-test-\(UUID().uuidString)")
             defer {
                 try? File.System.Delete.delete(at: targetPath)
                 try? File.System.Delete.delete(at: linkPath)
@@ -293,8 +293,8 @@ extension Test.`File System`.Unit {
 
         @Test("lstatInfo returns different inode than info for symlink")
         func lstatInfoReturnsDifferentInodeForSymlink() throws {
-            let targetPath = try File.Path("/tmp/stat-inode-target-\(UUID().uuidString).txt")
-            let linkPath = try File.Path("/tmp/stat-inode-test-\(UUID().uuidString)")
+            let targetPath = try File.Path.init("/tmp/stat-inode-target-\(UUID().uuidString).txt")
+            let linkPath = try File.Path.init("/tmp/stat-inode-test-\(UUID().uuidString)")
             defer {
                 try? File.System.Delete.delete(at: targetPath)
                 try? File.System.Delete.delete(at: linkPath)
@@ -326,7 +326,7 @@ extension Test.`File System`.Unit {
 
         @Test("lstatInfo same as info for regular file")
         func lstatInfoSameAsInfoForRegularFile() throws {
-            let filePath = try File.Path("/tmp/stat-lstat-regular-\(UUID().uuidString).txt")
+            let filePath = try File.Path.init("/tmp/stat-lstat-regular-\(UUID().uuidString).txt")
             defer { try? File.System.Delete.delete(at: filePath) }
 
             // Create file using our API

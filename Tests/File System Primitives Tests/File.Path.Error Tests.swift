@@ -8,7 +8,7 @@
 import Testing
 @testable import File_System_Primitives
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.Path.Error")
     struct PathError {
 

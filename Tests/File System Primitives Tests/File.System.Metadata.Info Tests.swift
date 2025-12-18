@@ -10,7 +10,7 @@ import Testing
 @_spi(Internal) import StandardTime
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Metadata.Info")
     struct MetadataInfo {
 

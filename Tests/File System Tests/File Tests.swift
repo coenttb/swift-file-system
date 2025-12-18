@@ -8,7 +8,7 @@
 import Testing
 @testable import File_System
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File")
     struct FileTests {
 
@@ -34,7 +34,7 @@ extension Test.`File System`.Unit {
 
         @Test("init from path")
         func initFromPath() throws {
-            let path = try File.Path("/tmp/test.txt")
+            let path = try File.Path.init("/tmp/test.txt")
             let file = File(path)
             #expect(file.path == path)
         }
@@ -231,7 +231,7 @@ extension Test.`File System`.Unit {
         func copyToPathCopiesFile() throws {
             let content: [UInt8] = [1, 2, 3]
             let source = try createTempFile(content: content)
-            let destPath = try File.Path("/tmp/file-copy-\(uniqueId()).bin")
+            let destPath = try File.Path.init("/tmp/file-copy-\(uniqueId()).bin")
             let dest = File(destPath)
             defer {
                 cleanup(source)
@@ -264,7 +264,7 @@ extension Test.`File System`.Unit {
         func moveToPathMovesFile() throws {
             let content: [UInt8] = [1, 2, 3]
             let source = try createTempFile(content: content)
-            let destPath = try File.Path("/tmp/file-move-\(uniqueId()).bin")
+            let destPath = try File.Path.init("/tmp/file-move-\(uniqueId()).bin")
             let dest = File(destPath)
             defer {
                 cleanup(source)

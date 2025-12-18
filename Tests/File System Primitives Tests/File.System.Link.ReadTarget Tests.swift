@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Link.ReadTarget")
     struct LinkReadTarget {
 
@@ -145,21 +145,21 @@ extension Test.`File System`.Unit {
 
         @Test("notASymlink error description")
         func notASymlinkErrorDescription() throws {
-            let path = try File.Path("/tmp/regular")
+            let path = try File.Path.init("/tmp/regular")
             let error = File.System.Link.ReadTarget.Error.notASymlink(path)
             #expect(error.description.contains("Not a symbolic link"))
         }
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing")
+            let path = try File.Path.init("/tmp/missing")
             let error = File.System.Link.ReadTarget.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/secret")
+            let path = try File.Path.init("/root/secret")
             let error = File.System.Link.ReadTarget.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
@@ -175,8 +175,8 @@ extension Test.`File System`.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path("/tmp/a")
-            let path2 = try File.Path("/tmp/a")
+            let path1 = try File.Path.init("/tmp/a")
+            let path2 = try File.Path.init("/tmp/a")
 
             #expect(File.System.Link.ReadTarget.Error.notASymlink(path1) == File.System.Link.ReadTarget.Error.notASymlink(path2))
             #expect(File.System.Link.ReadTarget.Error.pathNotFound(path1) == File.System.Link.ReadTarget.Error.pathNotFound(path2))

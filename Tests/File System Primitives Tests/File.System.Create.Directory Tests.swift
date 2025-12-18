@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Create.Directory")
     struct CreateDirectory {
 
@@ -157,7 +157,7 @@ extension Test.`File System`.Unit {
 
         @Test("alreadyExists error description")
         func alreadyExistsErrorDescription() throws {
-            let path = try File.Path("/tmp/existing")
+            let path = try File.Path.init("/tmp/existing")
             let error = File.System.Create.Directory.Error.alreadyExists(path)
             #expect(error.description.contains("Directory already exists"))
             #expect(error.description.contains("/tmp/existing"))
@@ -165,14 +165,14 @@ extension Test.`File System`.Unit {
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/forbidden")
+            let path = try File.Path.init("/root/forbidden")
             let error = File.System.Create.Directory.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("parentDirectoryNotFound error description")
         func parentDirectoryNotFoundErrorDescription() throws {
-            let path = try File.Path("/nonexistent/dir")
+            let path = try File.Path.init("/nonexistent/dir")
             let error = File.System.Create.Directory.Error.parentDirectoryNotFound(path)
             #expect(error.description.contains("Parent directory not found"))
         }
@@ -189,9 +189,9 @@ extension Test.`File System`.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path("/tmp/a")
-            let path2 = try File.Path("/tmp/a")
-            let path3 = try File.Path("/tmp/b")
+            let path1 = try File.Path.init("/tmp/a")
+            let path2 = try File.Path.init("/tmp/a")
+            let path3 = try File.Path.init("/tmp/b")
 
             #expect(File.System.Create.Directory.Error.alreadyExists(path1) == File.System.Create.Directory.Error.alreadyExists(path2))
             #expect(File.System.Create.Directory.Error.alreadyExists(path1) != File.System.Create.Directory.Error.alreadyExists(path3))

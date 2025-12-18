@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.Descriptor")
     struct Descriptor {
 
@@ -184,28 +184,28 @@ extension Test.`File System`.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing")
+            let path = try File.Path.init("/tmp/missing")
             let error = File.Descriptor.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/secret")
+            let path = try File.Path.init("/root/secret")
             let error = File.Descriptor.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("alreadyExists error description")
         func alreadyExistsErrorDescription() throws {
-            let path = try File.Path("/tmp/existing")
+            let path = try File.Path.init("/tmp/existing")
             let error = File.Descriptor.Error.alreadyExists(path)
             #expect(error.description.contains("already exists"))
         }
 
         @Test("isDirectory error description")
         func isDirectoryErrorDescription() throws {
-            let path = try File.Path("/tmp")
+            let path = try File.Path.init("/tmp")
             let error = File.Descriptor.Error.isDirectory(path)
             #expect(error.description.contains("Is a directory"))
         }
@@ -245,8 +245,8 @@ extension Test.`File System`.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path("/tmp/a")
-            let path2 = try File.Path("/tmp/a")
+            let path1 = try File.Path.init("/tmp/a")
+            let path2 = try File.Path.init("/tmp/a")
 
             #expect(File.Descriptor.Error.pathNotFound(path1) == File.Descriptor.Error.pathNotFound(path2))
             #expect(File.Descriptor.Error.tooManyOpenFiles == File.Descriptor.Error.tooManyOpenFiles)

@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Link.Symbolic")
     struct LinkSymbolic {
 
@@ -136,21 +136,21 @@ extension Test.`File System`.Unit {
 
         @Test("targetNotFound error description")
         func targetNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing")
+            let path = try File.Path.init("/tmp/missing")
             let error = File.System.Link.Symbolic.Error.targetNotFound(path)
             #expect(error.description.contains("Target not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/secret")
+            let path = try File.Path.init("/root/secret")
             let error = File.System.Link.Symbolic.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("alreadyExists error description")
         func alreadyExistsErrorDescription() throws {
-            let path = try File.Path("/tmp/existing")
+            let path = try File.Path.init("/tmp/existing")
             let error = File.System.Link.Symbolic.Error.alreadyExists(path)
             #expect(error.description.contains("already exists"))
         }
@@ -165,8 +165,8 @@ extension Test.`File System`.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path("/tmp/a")
-            let path2 = try File.Path("/tmp/a")
+            let path1 = try File.Path.init("/tmp/a")
+            let path2 = try File.Path.init("/tmp/a")
 
             #expect(File.System.Link.Symbolic.Error.alreadyExists(path1) == File.System.Link.Symbolic.Error.alreadyExists(path2))
             #expect(File.System.Link.Symbolic.Error.targetNotFound(path1) == File.System.Link.Symbolic.Error.targetNotFound(path2))

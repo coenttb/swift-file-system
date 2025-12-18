@@ -45,6 +45,7 @@ let package = Package(
             name: "File System Primitives Tests",
             dependencies: [
                 "File System Primitives",
+                .product(name: "StandardsTestSupport", package: "swift-standards"),
             ],
             path: "Tests/File System Primitives Tests"
         ),
@@ -52,6 +53,7 @@ let package = Package(
             name: "File System Tests",
             dependencies: [
                 "File System",
+                .product(name: "StandardsTestSupport", package: "swift-standards"),
             ],
             path: "Tests/File System Tests"
         ),
@@ -67,6 +69,7 @@ let package = Package(
             name: "File System Async Tests",
             dependencies: [
                 "File System Async",
+                .product(name: "StandardsTestSupport", package: "swift-standards"),
             ],
             path: "Tests/File System Async Tests"
         ),

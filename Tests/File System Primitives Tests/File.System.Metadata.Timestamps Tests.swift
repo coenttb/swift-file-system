@@ -10,7 +10,7 @@ import Testing
 @_spi(Internal) import StandardTime
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Metadata.Timestamps")
     struct MetadataTimestamps {
 
@@ -168,14 +168,14 @@ extension Test.`File System`.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing")
+            let path = try File.Path.init("/tmp/missing")
             let error = File.System.Metadata.Timestamps.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/secret")
+            let path = try File.Path.init("/root/secret")
             let error = File.System.Metadata.Timestamps.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }

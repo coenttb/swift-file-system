@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Async
 import Foundation
 
-extension Test.`File System Async`.Unit {
+extension File.System.Async.Test.Unit {
     @Suite("File.Directory.Walk")
     struct DirectoryWalk {
 
@@ -139,7 +139,7 @@ extension Test.`File System Async`.Unit {
             let io = File.IO.Executor()
             defer { Task { await io.shutdown() } }
 
-            let path = try File.Path("/tmp/nonexistent-\(UUID().uuidString)")
+            let path = try File.Path.init("/tmp/nonexistent-\(UUID().uuidString)")
 
             let walk = File.Directory.Async(io: io).walk(at: path)
 

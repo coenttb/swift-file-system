@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Write.Append")
     struct WriteAppend {
 
@@ -131,21 +131,21 @@ extension Test.`File System`.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing/nested/file.txt")
+            let path = try File.Path.init("/tmp/missing/nested/file.txt")
             let error = File.System.Write.Append.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/secret.txt")
+            let path = try File.Path.init("/root/secret.txt")
             let error = File.System.Write.Append.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("isDirectory error description")
         func isDirectoryErrorDescription() throws {
-            let path = try File.Path("/tmp")
+            let path = try File.Path.init("/tmp")
             let error = File.System.Write.Append.Error.isDirectory(path)
             #expect(error.description.contains("Is a directory"))
         }
@@ -161,8 +161,8 @@ extension Test.`File System`.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path("/tmp/a")
-            let path2 = try File.Path("/tmp/a")
+            let path1 = try File.Path.init("/tmp/a")
+            let path2 = try File.Path.init("/tmp/a")
 
             #expect(File.System.Write.Append.Error.pathNotFound(path1) == File.System.Write.Append.Error.pathNotFound(path2))
             #expect(File.System.Write.Append.Error.isDirectory(path1) == File.System.Write.Append.Error.isDirectory(path2))

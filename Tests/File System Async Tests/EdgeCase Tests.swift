@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Async
 import Foundation
 
-extension Test.`File System Async`.EdgeCase {
+extension File.System.Async.Test.EdgeCase {
     @Suite("Edge Cases", .tags(.asyncEdgeCase))
     struct EdgeCases {
 
@@ -107,7 +107,7 @@ extension Test.`File System Async`.EdgeCase {
 
             // Create 100 files
             for i in 0..<100 {
-                let filePath = try File.Path("\(dir.string)/file-\(i).txt")
+                let filePath = try File.Path.init("\(dir.string)/file-\(i).txt")
                 try createFile(at: filePath)
             }
 
@@ -130,7 +130,7 @@ extension Test.`File System Async`.EdgeCase {
 
             // Create initial files
             for i in 0..<10 {
-                let filePath = try File.Path("\(dir.string)/initial-\(i).txt")
+                let filePath = try File.Path.init("\(dir.string)/initial-\(i).txt")
                 try createFile(at: filePath)
             }
 
@@ -140,7 +140,7 @@ extension Test.`File System Async`.EdgeCase {
                 count += 1
                 // Add new files during iteration (may or may not be seen)
                 if count == 5 {
-                    let newPath = try File.Path("\(dir.string)/added-during-\(UUID().uuidString).txt")
+                    let newPath = try File.Path.init("\(dir.string)/added-during-\(UUID().uuidString).txt")
                     try createFile(at: newPath)
                 }
                 _ = entry
@@ -177,7 +177,7 @@ extension Test.`File System Async`.EdgeCase {
 
             // Create many files
             for i in 0..<50 {
-                let filePath = try File.Path("\(dir.string)/file-\(i).txt")
+                let filePath = try File.Path.init("\(dir.string)/file-\(i).txt")
                 try createFile(at: filePath)
             }
 
@@ -203,7 +203,7 @@ extension Test.`File System Async`.EdgeCase {
 
             // Create files
             for i in 0..<20 {
-                let filePath = try File.Path("\(dir.string)/file-\(i).txt")
+                let filePath = try File.Path.init("\(dir.string)/file-\(i).txt")
                 try createFile(at: filePath)
             }
 
@@ -240,10 +240,10 @@ extension Test.`File System Async`.EdgeCase {
             // Create 10 levels of nesting
             var currentPath = root
             for i in 0..<10 {
-                let subPath = try File.Path("\(currentPath.string)/level-\(i)")
+                let subPath = try File.Path.init("\(currentPath.string)/level-\(i)")
                 try FileManager.default.createDirectory(atPath: subPath.string, withIntermediateDirectories: true)
                 // Add a file at each level
-                let filePath = try File.Path("\(subPath.string)/file.txt")
+                let filePath = try File.Path.init("\(subPath.string)/file.txt")
                 try createFile(at: filePath)
                 currentPath = subPath
             }
@@ -267,11 +267,11 @@ extension Test.`File System Async`.EdgeCase {
             defer { cleanupPath(root) }
 
             // Create subdirectory
-            let subPath = try File.Path("\(root.string)/subdir")
+            let subPath = try File.Path.init("\(root.string)/subdir")
             try FileManager.default.createDirectory(atPath: subPath.string, withIntermediateDirectories: true)
 
             // Create symlink to parent (cycle)
-            let linkPath = try File.Path("\(subPath.string)/parent-link")
+            let linkPath = try File.Path.init("\(subPath.string)/parent-link")
             try File.System.Link.Symbolic.create(at: linkPath, pointingTo: root)
 
             // Walk without following symlinks - should complete fine
@@ -294,15 +294,15 @@ extension Test.`File System Async`.EdgeCase {
             defer { cleanupPath(root) }
 
             // Create subdirectory
-            let subPath = try File.Path("\(root.string)/subdir")
+            let subPath = try File.Path.init("\(root.string)/subdir")
             try FileManager.default.createDirectory(atPath: subPath.string, withIntermediateDirectories: true)
 
             // Create symlink to parent (cycle)
-            let linkPath = try File.Path("\(subPath.string)/parent-link")
+            let linkPath = try File.Path.init("\(subPath.string)/parent-link")
             try File.System.Link.Symbolic.create(at: linkPath, pointingTo: root)
 
             // Create a file so we can verify walk works
-            let filePath = try File.Path("\(root.string)/file.txt")
+            let filePath = try File.Path.init("\(root.string)/file.txt")
             try createFile(at: filePath)
 
             // Walk with following symlinks - cycle detection should prevent infinite loop
@@ -326,7 +326,7 @@ extension Test.`File System Async`.EdgeCase {
             let io = File.IO.Executor()
             defer { Task { await io.shutdown() } }
 
-            let path = try File.Path("/tmp/non-existent-\(UUID().uuidString)")
+            let path = try File.Path.init("/tmp/non-existent-\(UUID().uuidString)")
 
             let walk = File.Directory.Async(io: io).walk(at: path)
 
@@ -349,19 +349,19 @@ extension Test.`File System Async`.EdgeCase {
             defer { cleanupPath(root) }
 
             // Create regular file
-            let filePath = try File.Path("\(root.string)/file.txt")
+            let filePath = try File.Path.init("\(root.string)/file.txt")
             try createFile(at: filePath)
 
             // Create subdirectory
-            let subPath = try File.Path("\(root.string)/subdir")
+            let subPath = try File.Path.init("\(root.string)/subdir")
             try FileManager.default.createDirectory(atPath: subPath.string, withIntermediateDirectories: true)
 
             // Create symlink to file
-            let linkPath = try File.Path("\(root.string)/link")
+            let linkPath = try File.Path.init("\(root.string)/link")
             try File.System.Link.Symbolic.create(at: linkPath, pointingTo: filePath)
 
             // Create file in subdir
-            let subFilePath = try File.Path("\(subPath.string)/nested.txt")
+            let subFilePath = try File.Path.init("\(subPath.string)/nested.txt")
             try createFile(at: subFilePath)
 
             var paths: [String] = []
@@ -448,7 +448,7 @@ extension Test.`File System Async`.EdgeCase {
             let io = File.IO.Executor()
             defer { Task { await io.shutdown() } }
 
-            let path = try File.Path("/tmp/non-existent-\(UUID().uuidString)")
+            let path = try File.Path.init("/tmp/non-existent-\(UUID().uuidString)")
 
             let stream = File.Stream.Async(io: io).bytes(from: path)
 
@@ -499,7 +499,7 @@ extension Test.`File System Async`.EdgeCase {
 
             // Create many files
             for i in 0..<100 {
-                let filePath = try File.Path("\(dir.string)/file-\(i).txt")
+                let filePath = try File.Path.init("\(dir.string)/file-\(i).txt")
                 try createFile(at: filePath)
             }
 
@@ -535,10 +535,10 @@ extension Test.`File System Async`.EdgeCase {
 
             // Create some structure
             for i in 0..<5 {
-                let subPath = try File.Path("\(root.string)/dir-\(i)")
+                let subPath = try File.Path.init("\(root.string)/dir-\(i)")
                 try FileManager.default.createDirectory(atPath: subPath.string, withIntermediateDirectories: true)
                 for j in 0..<10 {
-                    let filePath = try File.Path("\(subPath.string)/file-\(j).txt")
+                    let filePath = try File.Path.init("\(subPath.string)/file-\(j).txt")
                     try createFile(at: filePath)
                 }
             }
@@ -613,7 +613,7 @@ extension Test.`File System Async`.EdgeCase {
             let io = File.IO.Executor()
             defer { Task { await io.shutdown() } }
 
-            let path = try File.Path("/tmp/non-existent-\(UUID().uuidString)")
+            let path = try File.Path.init("/tmp/non-existent-\(UUID().uuidString)")
 
             let system = File.System.Async(io: io)
             let exists = try await system.exists(path)
@@ -656,7 +656,7 @@ extension Test.`File System Async`.EdgeCase {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 for i in 0..<50 {
                     group.addTask {
-                        let path = try File.Path("\(basePath)-\(i)")
+                        let path = try File.Path.init("\(basePath)-\(i)")
                         defer { try? File.System.Delete.delete(at: path) }
 
                         var handle = try File.Handle.open(path, mode: .write, options: [.create, .closeOnExec])

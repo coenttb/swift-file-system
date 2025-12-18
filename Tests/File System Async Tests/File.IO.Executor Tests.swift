@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Async
 import Foundation
 
-extension Test.`File System Async`.Unit {
+extension File.System.Async.Test.Unit {
     @Suite("File.IO.Executor")
     struct Executor {
 

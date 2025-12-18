@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Delete")
     struct Delete {
 
@@ -143,7 +143,7 @@ extension Test.`File System`.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing.txt")
+            let path = try File.Path.init("/tmp/missing.txt")
             let error = File.System.Delete.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
             #expect(error.description.contains("/tmp/missing.txt"))
@@ -151,14 +151,14 @@ extension Test.`File System`.Unit {
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/protected")
+            let path = try File.Path.init("/root/protected")
             let error = File.System.Delete.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("isDirectory error description")
         func isDirectoryErrorDescription() throws {
-            let path = try File.Path("/tmp/somedir")
+            let path = try File.Path.init("/tmp/somedir")
             let error = File.System.Delete.Error.isDirectory(path)
             #expect(error.description.contains("Is a directory"))
             #expect(error.description.contains("recursive"))
@@ -166,7 +166,7 @@ extension Test.`File System`.Unit {
 
         @Test("directoryNotEmpty error description")
         func directoryNotEmptyErrorDescription() throws {
-            let path = try File.Path("/tmp/nonempty")
+            let path = try File.Path.init("/tmp/nonempty")
             let error = File.System.Delete.Error.directoryNotEmpty(path)
             #expect(error.description.contains("Directory not empty"))
             #expect(error.description.contains("recursive"))
@@ -184,9 +184,9 @@ extension Test.`File System`.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path("/tmp/a")
-            let path2 = try File.Path("/tmp/a")
-            let path3 = try File.Path("/tmp/b")
+            let path1 = try File.Path.init("/tmp/a")
+            let path2 = try File.Path.init("/tmp/a")
+            let path3 = try File.Path.init("/tmp/b")
 
             #expect(File.System.Delete.Error.pathNotFound(path1) == File.System.Delete.Error.pathNotFound(path2))
             #expect(File.System.Delete.Error.pathNotFound(path1) != File.System.Delete.Error.pathNotFound(path3))

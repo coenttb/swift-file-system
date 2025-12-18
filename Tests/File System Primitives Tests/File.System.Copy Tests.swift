@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Copy")
     struct Copy {
 
@@ -181,28 +181,28 @@ extension Test.`File System`.Unit {
 
         @Test("sourceNotFound error description")
         func sourceNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing")
+            let path = try File.Path.init("/tmp/missing")
             let error = File.System.Copy.Error.sourceNotFound(path)
             #expect(error.description.contains("Source not found"))
         }
 
         @Test("destinationExists error description")
         func destinationExistsErrorDescription() throws {
-            let path = try File.Path("/tmp/existing")
+            let path = try File.Path.init("/tmp/existing")
             let error = File.System.Copy.Error.destinationExists(path)
             #expect(error.description.contains("already exists"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/secret")
+            let path = try File.Path.init("/root/secret")
             let error = File.System.Copy.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("isDirectory error description")
         func isDirectoryErrorDescription() throws {
-            let path = try File.Path("/tmp")
+            let path = try File.Path.init("/tmp")
             let error = File.System.Copy.Error.isDirectory(path)
             #expect(error.description.contains("Is a directory"))
         }
@@ -218,8 +218,8 @@ extension Test.`File System`.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path("/tmp/a")
-            let path2 = try File.Path("/tmp/a")
+            let path1 = try File.Path.init("/tmp/a")
+            let path2 = try File.Path.init("/tmp/a")
 
             #expect(File.System.Copy.Error.sourceNotFound(path1) == File.System.Copy.Error.sourceNotFound(path2))
             #expect(File.System.Copy.Error.destinationExists(path1) == File.System.Copy.Error.destinationExists(path2))

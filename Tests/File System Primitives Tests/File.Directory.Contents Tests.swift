@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.Directory.Contents")
     struct DirectoryContents {
 
@@ -177,21 +177,21 @@ extension Test.`File System`.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing")
+            let path = try File.Path.init("/tmp/missing")
             let error = File.Directory.Contents.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root")
+            let path = try File.Path.init("/root")
             let error = File.Directory.Contents.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("notADirectory error description")
         func notADirectoryErrorDescription() throws {
-            let path = try File.Path("/tmp/file.txt")
+            let path = try File.Path.init("/tmp/file.txt")
             let error = File.Directory.Contents.Error.notADirectory(path)
             #expect(error.description.contains("Not a directory"))
         }

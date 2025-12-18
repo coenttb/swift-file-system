@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Async
 import Foundation
 
-extension Test.`File System Async`.Unit {
+extension File.System.Async.Test.Unit {
     @Suite("File.Stream.Bytes")
     struct StreamBytes {
 
@@ -149,7 +149,7 @@ extension Test.`File System Async`.Unit {
             let io = File.IO.Executor()
             defer { Task { await io.shutdown() } }
 
-            let path = try File.Path("/tmp/nonexistent-\(UUID().uuidString).bin")
+            let path = try File.Path.init("/tmp/nonexistent-\(UUID().uuidString).bin")
 
             let stream = File.Stream.Async(io: io).bytes(from: path)
 

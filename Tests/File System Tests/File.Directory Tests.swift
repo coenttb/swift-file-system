@@ -8,7 +8,7 @@
 import Testing
 @testable import File_System
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.Directory")
     struct DirectoryTests {
 
@@ -34,7 +34,7 @@ extension Test.`File System`.Unit {
 
         @Test("init from path")
         func initFromPath() throws {
-            let path = try File.Path("/tmp/test")
+            let path = try File.Path.init("/tmp/test")
             let dir = File.Directory(path)
             #expect(dir.path == path)
         }

@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Read.Full")
     struct ReadFull {
 
@@ -169,7 +169,7 @@ extension Test.`File System`.Unit {
 
         @Test("pathNotFound error description")
         func pathNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing.txt")
+            let path = try File.Path.init("/tmp/missing.txt")
             let error = File.System.Read.Full.Error.pathNotFound(path)
             #expect(error.description.contains("Path not found"))
             #expect(error.description.contains("/tmp/missing.txt"))
@@ -177,14 +177,14 @@ extension Test.`File System`.Unit {
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/secret.txt")
+            let path = try File.Path.init("/root/secret.txt")
             let error = File.System.Read.Full.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("isDirectory error description")
         func isDirectoryErrorDescription() throws {
-            let path = try File.Path("/tmp")
+            let path = try File.Path.init("/tmp")
             let error = File.System.Read.Full.Error.isDirectory(path)
             #expect(error.description.contains("Is a directory"))
         }
@@ -207,9 +207,9 @@ extension Test.`File System`.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path("/tmp/a")
-            let path2 = try File.Path("/tmp/a")
-            let path3 = try File.Path("/tmp/b")
+            let path1 = try File.Path.init("/tmp/a")
+            let path2 = try File.Path.init("/tmp/a")
+            let path3 = try File.Path.init("/tmp/b")
 
             #expect(File.System.Read.Full.Error.pathNotFound(path1) == File.System.Read.Full.Error.pathNotFound(path2))
             #expect(File.System.Read.Full.Error.pathNotFound(path1) != File.System.Read.Full.Error.pathNotFound(path3))

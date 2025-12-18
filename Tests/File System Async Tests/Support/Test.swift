@@ -6,24 +6,15 @@
 //
 
 import Testing
+import File_System_Async
 
 extension Test {
+    struct Unit {}
+    struct EdgeCase {}
     @Suite(.serialized)
-    struct `File System Async` {
-        struct `Unit` {}
-        struct `EdgeCase` {}
-
-        // Phase 2: Additional themed suites
-        // @Suite(.serialized, .tags(.integration))
-        // struct `Integration` {}
-        //
-        // @Suite(.serialized, .tags(.performance))
-        // struct `Performance` {}
-    }
+    struct Performance {}
 }
 
-extension Tag {
-    @Tag static var asyncIntegration: Self
-    @Tag static var asyncPerformance: Self
-    @Tag static var asyncEdgeCase: Self
+extension File.System.Async {
+    typealias Test = Testing.Test
 }

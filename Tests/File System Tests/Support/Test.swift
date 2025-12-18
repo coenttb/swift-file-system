@@ -6,10 +6,15 @@
 //
 
 import Testing
+import File_System
 
 extension Test {
+    struct Unit {}
+    struct EdgeCase {}
     @Suite(.serialized)
-    struct `File System` {
-        struct `Unit` {}
-    }
+    struct Performance {}
+}
+
+extension File.System {
+    typealias Test = Testing.Test
 }

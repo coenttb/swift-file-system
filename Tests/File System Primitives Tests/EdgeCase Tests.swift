@@ -15,7 +15,7 @@ import Darwin
 import Glibc
 #endif
 
-extension Test.`File System`.EdgeCase {
+extension File.System.Test.EdgeCase {
     @Suite("Edge Cases", .tags(.edgeCase))
     struct EdgeCases {
 
@@ -92,7 +92,7 @@ extension Test.`File System`.EdgeCase {
             var didThrow = false
             do {
                 _ = try File.Path(emptyString)
-            } catch is File.Path.Error {
+            } catch {
                 didThrow = true
             }
             #expect(didThrow)
@@ -101,7 +101,7 @@ extension Test.`File System`.EdgeCase {
         @Test("Path with only spaces is handled")
         func pathWithOnlySpaces() throws {
             // This is actually a valid path on POSIX
-            let path = try File.Path("/tmp/   ")
+            let path = try File.Path.init("/tmp/   ")
             #expect(path.string == "/tmp/   ")
         }
 
@@ -124,7 +124,7 @@ extension Test.`File System`.EdgeCase {
             var didThrow = false
             do {
                 _ = try File.Path(pathString)
-            } catch is File.Path.Error {
+            } catch {
                 didThrow = true
             }
             #expect(didThrow)
@@ -262,7 +262,7 @@ extension Test.`File System`.EdgeCase {
             var didThrow = false
             do {
                 _ = try handle.seek(to: -1, from: .start)
-            } catch is File.Handle.Error {
+            } catch {
                 didThrow = true
             }
 
@@ -651,7 +651,7 @@ extension Test.`File System`.EdgeCase {
             let basePath = createTempPath()
 
             for i in 0..<50 {
-                let path = try File.Path("\(basePath)-\(i)")
+                let path = try File.Path.init("\(basePath)-\(i)")
                 var handle = try File.Handle.open(path, mode: .write, options: [.create, .closeOnExec])
                 try handle.close()
                 try File.System.Delete.delete(at: path)

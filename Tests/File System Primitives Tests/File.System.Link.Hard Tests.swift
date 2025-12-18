@@ -9,7 +9,7 @@ import Testing
 @testable import File_System_Primitives
 import Foundation
 
-extension Test.`File System`.Unit {
+extension File.System.Test.Unit {
     @Suite("File.System.Link.Hard")
     struct LinkHard {
 
@@ -154,36 +154,36 @@ extension Test.`File System`.Unit {
 
         @Test("sourceNotFound error description")
         func sourceNotFoundErrorDescription() throws {
-            let path = try File.Path("/tmp/missing")
+            let path = try File.Path.init("/tmp/missing")
             let error = File.System.Link.Hard.Error.sourceNotFound(path)
             #expect(error.description.contains("Source not found"))
         }
 
         @Test("permissionDenied error description")
         func permissionDeniedErrorDescription() throws {
-            let path = try File.Path("/root/secret")
+            let path = try File.Path.init("/root/secret")
             let error = File.System.Link.Hard.Error.permissionDenied(path)
             #expect(error.description.contains("Permission denied"))
         }
 
         @Test("alreadyExists error description")
         func alreadyExistsErrorDescription() throws {
-            let path = try File.Path("/tmp/existing")
+            let path = try File.Path.init("/tmp/existing")
             let error = File.System.Link.Hard.Error.alreadyExists(path)
             #expect(error.description.contains("already exists"))
         }
 
         @Test("crossDevice error description")
         func crossDeviceErrorDescription() throws {
-            let source = try File.Path("/tmp/source")
-            let dest = try File.Path("/var/dest")
+            let source = try File.Path.init("/tmp/source")
+            let dest = try File.Path.init("/var/dest")
             let error = File.System.Link.Hard.Error.crossDevice(source: source, destination: dest)
             #expect(error.description.contains("Cross-device"))
         }
 
         @Test("isDirectory error description")
         func isDirectoryErrorDescription() throws {
-            let path = try File.Path("/tmp")
+            let path = try File.Path.init("/tmp")
             let error = File.System.Link.Hard.Error.isDirectory(path)
             #expect(error.description.contains("Cannot create hard link to directory"))
         }
@@ -198,8 +198,8 @@ extension Test.`File System`.Unit {
 
         @Test("Errors are equatable")
         func errorsAreEquatable() throws {
-            let path1 = try File.Path("/tmp/a")
-            let path2 = try File.Path("/tmp/a")
+            let path1 = try File.Path.init("/tmp/a")
+            let path2 = try File.Path.init("/tmp/a")
 
             #expect(File.System.Link.Hard.Error.sourceNotFound(path1) == File.System.Link.Hard.Error.sourceNotFound(path2))
             #expect(File.System.Link.Hard.Error.alreadyExists(path1) == File.System.Link.Hard.Error.alreadyExists(path2))
