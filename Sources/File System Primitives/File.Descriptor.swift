@@ -80,6 +80,7 @@ extension File.Descriptor {
         case invalidDescriptor
         case openFailed(errno: Int32, message: String)
         case closeFailed(errno: Int32, message: String)
+        case duplicateFailed(errno: Int32, message: String)
         case alreadyClosed
     }
 }
@@ -210,6 +211,60 @@ extension File.Descriptor {
         }
         #endif
     }
+
+    /// Duplicates the file descriptor.
+    ///
+    /// Creates a new file descriptor that refers to the same open file.
+    /// Both descriptors can be used independently and must be closed separately.
+    ///
+    /// ## Example
+    /// ```swift
+    /// let original = try File.Descriptor.open(path, mode: .read)
+    /// let duplicate = try original.duplicated()
+    /// // Both can be used independently
+    /// ```
+    ///
+    /// - Returns: A new file descriptor referring to the same file.
+    /// - Throws: `File.Descriptor.Error.duplicateFailed` on failure.
+    public func duplicated() throws(Error) -> File.Descriptor {
+        #if os(Windows)
+        guard let handle = _handle.value, handle != INVALID_HANDLE_VALUE else {
+            throw .invalidDescriptor
+        }
+
+        var duplicateHandle: HANDLE?
+        let currentProcess = GetCurrentProcess()
+
+        guard DuplicateHandle(
+            currentProcess,
+            handle,
+            currentProcess,
+            &duplicateHandle,
+            0,
+            false,
+            DWORD(DUPLICATE_SAME_ACCESS)
+        ) else {
+            throw .duplicateFailed(errno: Int32(GetLastError()), message: "DuplicateHandle failed")
+        }
+
+        guard let newHandle = duplicateHandle else {
+            throw .duplicateFailed(errno: 0, message: "DuplicateHandle returned nil")
+        }
+
+        return File.Descriptor(__unchecked: newHandle)
+        #else
+        guard _fd >= 0 else {
+            throw .invalidDescriptor
+        }
+
+        let newFd = dup(_fd)
+        guard newFd >= 0 else {
+            throw .duplicateFailed(errno: errno, message: String(cString: strerror(errno)))
+        }
+
+        return File.Descriptor(__unchecked: newFd)
+        #endif
+    }
 }
 
 // MARK: - CustomStringConvertible for Error
@@ -233,6 +288,8 @@ extension File.Descriptor.Error: CustomStringConvertible {
             return "Open failed: \(message) (errno=\(errno))"
         case .closeFailed(let errno, let message):
             return "Close failed: \(message) (errno=\(errno))"
+        case .duplicateFailed(let errno, let message):
+            return "Duplicate failed: \(message) (errno=\(errno))"
         case .alreadyClosed:
             return "Descriptor already closed"
         }

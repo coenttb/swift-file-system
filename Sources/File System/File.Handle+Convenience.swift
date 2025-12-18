@@ -5,6 +5,45 @@
 //  Created by Coen ten Thije Boonkkamp on 18/12/2025.
 //
 
+// MARK: - Seek Conveniences
+
+extension File.Handle {
+    /// Seeks to the beginning of the file.
+    ///
+    /// Equivalent to `seek(to: 0, from: .start)`.
+    ///
+    /// ## Example
+    /// ```swift
+    /// try handle.rewind()
+    /// let data = try handle.read(count: 100)  // Read from start
+    /// ```
+    ///
+    /// - Returns: The new position (always 0).
+    /// - Throws: `File.Handle.Error` on failure.
+    @discardableResult
+    public mutating func rewind() throws(Error) -> Int64 {
+        try seek(to: 0, from: .start)
+    }
+
+    /// Seeks to the end of the file.
+    ///
+    /// Useful for determining file size or appending data.
+    ///
+    /// ## Example
+    /// ```swift
+    /// let size = try handle.seekToEnd()  // Returns file size
+    /// ```
+    ///
+    /// - Returns: The new position (file size).
+    /// - Throws: `File.Handle.Error` on failure.
+    @discardableResult
+    public mutating func seekToEnd() throws(Error) -> Int64 {
+        try seek(to: 0, from: .end)
+    }
+}
+
+// MARK: - withOpen
+
 extension File.Handle {
     /// Opens a file, runs a closure, and ensures the handle is closed.
     ///

@@ -25,7 +25,7 @@ extension File {
     /// ```
     public struct Path: Hashable, Sendable {
         @usableFromInline
-        internal var _path: FilePath
+        package var _path: FilePath
 
         /// Creates a validated path from a string.
         ///
@@ -58,18 +58,18 @@ extension File {
             self._path = filePath
         }
 
-        /// Internal non-throwing initializer for trusted string sources.
+        /// Package non-throwing initializer for trusted string sources.
         @usableFromInline
-        internal init(__unchecked: Void, _ string: String) {
+        package init(__unchecked: Void, _ string: String) {
             self._path = FilePath(string)
         }
 
-        /// Internal non-throwing initializer for trusted FilePath sources.
+        /// Package non-throwing initializer for trusted FilePath sources.
         ///
         /// Use this for FilePath values derived from valid File.Path operations
         /// where we know the result cannot be empty or contain control characters.
         @usableFromInline
-        internal init(__unchecked: Void, _ filePath: FilePath) {
+        package init(__unchecked: Void, _ filePath: FilePath) {
             self._path = filePath
         }
     }

@@ -14,11 +14,11 @@ extension File.Path {
     /// For example, in `/usr/local/bin`, the components are `usr`, `local`, and `bin`.
     public struct Component: Hashable, Sendable {
         @usableFromInline
-        internal var _component: FilePath.Component
+        package var _component: FilePath.Component
 
         /// Creates a component from a SystemPackage FilePath.Component.
         @usableFromInline
-        internal init(__unchecked component: FilePath.Component) {
+        package init(__unchecked component: FilePath.Component) {
             self._component = component
         }
 

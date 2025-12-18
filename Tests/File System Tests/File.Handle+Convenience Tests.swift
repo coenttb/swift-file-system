@@ -156,6 +156,99 @@ extension Test.`File System`.Unit {
             }
         }
 
+        // MARK: - rewind
+
+        @Test("rewind seeks to beginning")
+        func rewindSeeksToBeginning() throws {
+            let content: [UInt8] = [1, 2, 3, 4, 5]
+            let path = try createTempFile(content: content)
+            defer { cleanup(path) }
+
+            let filePath = try File.Path(path)
+            let result = try File.Handle.withOpen(filePath, mode: .read) { handle in
+                // Read some data
+                _ = try handle.read(count: 3)
+
+                // Rewind to beginning
+                let position = try handle.rewind()
+                #expect(position == 0)
+
+                // Read from beginning again
+                return try handle.read(count: 5)
+            }
+
+            #expect(result == content)
+        }
+
+        @Test("rewind returns zero position")
+        func rewindReturnsZero() throws {
+            let content: [UInt8] = [1, 2, 3, 4, 5]
+            let path = try createTempFile(content: content)
+            defer { cleanup(path) }
+
+            let filePath = try File.Path(path)
+            let position = try File.Handle.withOpen(filePath, mode: .read) { handle in
+                // Seek to middle
+                _ = try handle.seek(to: 3, from: .start)
+
+                // Rewind and check position
+                return try handle.rewind()
+            }
+
+            #expect(position == 0)
+        }
+
+        // MARK: - seekToEnd
+
+        @Test("seekToEnd returns file size")
+        func seekToEndReturnsFileSize() throws {
+            let content: [UInt8] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            let path = try createTempFile(content: content)
+            defer { cleanup(path) }
+
+            let filePath = try File.Path(path)
+            let size = try File.Handle.withOpen(filePath, mode: .read) { handle in
+                try handle.seekToEnd()
+            }
+
+            #expect(size == 10)
+        }
+
+        @Test("seekToEnd on empty file returns zero")
+        func seekToEndOnEmptyFile() throws {
+            let path = try createTempFile(content: [])
+            defer { cleanup(path) }
+
+            let filePath = try File.Path(path)
+            let size = try File.Handle.withOpen(filePath, mode: .read) { handle in
+                try handle.seekToEnd()
+            }
+
+            #expect(size == 0)
+        }
+
+        @Test("seekToEnd then rewind allows re-read")
+        func seekToEndThenRewindAllowsReRead() throws {
+            let content: [UInt8] = [10, 20, 30]
+            let path = try createTempFile(content: content)
+            defer { cleanup(path) }
+
+            let filePath = try File.Path(path)
+            let result = try File.Handle.withOpen(filePath, mode: .read) { handle in
+                // Seek to end
+                let size = try handle.seekToEnd()
+                #expect(size == 3)
+
+                // Rewind
+                try handle.rewind()
+
+                // Read all content
+                return try handle.read(count: Int(size))
+            }
+
+            #expect(result == content)
+        }
+
         // MARK: - Async withOpen
 
         @Test("async withOpen reads file content")
@@ -187,6 +280,89 @@ extension Test.`File System`.Unit {
             }
 
             #expect(result == content)
+        }
+
+        // MARK: - .open namespace
+
+        @Test("open.read reads file")
+        func openReadReadsFile() throws {
+            let content: [UInt8] = [1, 2, 3, 4, 5]
+            let path = try createTempFile(content: content)
+            defer { cleanup(path) }
+
+            let filePath = try File.Path(path)
+            let readData = try File.Handle.open(filePath).read { handle in
+                try handle.read(count: 10)
+            }
+
+            #expect(readData == content)
+        }
+
+        @Test("open.write writes to file")
+        func openWriteWritesToFile() throws {
+            let path = try createTempFile()
+            defer { cleanup(path) }
+
+            let filePath = try File.Path(path)
+            let dataToWrite: [UInt8] = [100, 200]
+
+            try File.Handle.open(filePath, options: [.truncate]).write { handle in
+                try dataToWrite.withUnsafeBufferPointer { buffer in
+                    let span = Span<UInt8>(_unsafeElements: buffer)
+                    try handle.write(span)
+                }
+            }
+
+            let readBack = try [UInt8](Data(contentsOf: URL(fileURLWithPath: path)))
+            #expect(readBack == dataToWrite)
+        }
+
+        @Test("open.appending appends to file")
+        func openAppendingAppendsToFile() throws {
+            let initialContent: [UInt8] = [1, 2, 3]
+            let path = try createTempFile(content: initialContent)
+            defer { cleanup(path) }
+
+            let filePath = try File.Path(path)
+            let dataToAppend: [UInt8] = [4, 5, 6]
+
+            try File.Handle.open(filePath).appending { handle in
+                try dataToAppend.withUnsafeBufferPointer { buffer in
+                    let span = Span<UInt8>(_unsafeElements: buffer)
+                    try handle.write(span)
+                }
+            }
+
+            let readBack = try [UInt8](Data(contentsOf: URL(fileURLWithPath: path)))
+            #expect(readBack == [1, 2, 3, 4, 5, 6])
+        }
+
+        @Test("open.readWrite allows read and write")
+        func openReadWriteAllowsReadAndWrite() throws {
+            let initialContent: [UInt8] = [1, 2, 3, 4, 5]
+            let path = try createTempFile(content: initialContent)
+            defer { cleanup(path) }
+
+            let filePath = try File.Path(path)
+
+            let result = try File.Handle.open(filePath).readWrite { handle in
+                // Read first
+                let data = try handle.read(count: 3)
+                // Seek back
+                try handle.rewind()
+                // Write
+                let newData: [UInt8] = [10, 20, 30]
+                try newData.withUnsafeBufferPointer { buffer in
+                    let span = Span<UInt8>(_unsafeElements: buffer)
+                    try handle.write(span)
+                }
+                return data
+            }
+
+            #expect(result == [1, 2, 3])
+
+            let readBack = try [UInt8](Data(contentsOf: URL(fileURLWithPath: path)))
+            #expect(readBack == [10, 20, 30, 4, 5])
         }
     }
 }
