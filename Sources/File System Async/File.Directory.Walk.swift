@@ -132,6 +132,7 @@ extension File.Directory.Async.WalkSequence {
             guard !isFinished else { return }
             isFinished = true
             producerTask.cancel()
+            channel.finish()  // Consumer's next() returns nil immediately
         }
 
         // MARK: - Walk Implementation

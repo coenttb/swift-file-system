@@ -131,6 +131,7 @@ extension File.Stream.Async.ByteSequence {
             guard !isFinished else { return }
             isFinished = true
             producerTask.cancel()
+            channel.finish()  // Consumer's next() returns nil immediately
         }
 
         // MARK: - Producer
