@@ -24,8 +24,14 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "CFileSystemShims",
+            path: "Sources/CFileSystemShims",
+            publicHeadersPath: "include"
+        ),
+        .target(
             name: "File System Primitives",
             dependencies: [
+                "CFileSystemShims",
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "Binary", package: "swift-standards"),
                 .product(name: "StandardTime", package: "swift-standards"),

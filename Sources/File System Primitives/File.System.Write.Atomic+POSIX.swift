@@ -6,6 +6,7 @@
     #if canImport(Darwin)
         import Darwin
     #elseif canImport(Glibc)
+        import CFileSystemShims
         import Glibc
     #elseif canImport(Musl)
         import Musl
@@ -484,13 +485,6 @@
                     )
                 )
             }
-
-            @_silgen_name("atomicfilewrite_renameat2_noreplace")
-            private static func atomicfilewrite_renameat2_noreplace(
-                _ from: UnsafePointer<CChar>,
-                _ to: UnsafePointer<CChar>,
-                _ outErrno: UnsafeMutablePointer<Int32>
-            ) -> Int32
         #endif
 
         /// Syncs a directory to persist rename operations.
