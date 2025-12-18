@@ -622,10 +622,9 @@
         ) throws(File.System.Write.Atomic.Error) {
             #if canImport(Darwin)
                 try copyXattrsDarwin(from: srcPath, to: dstFd)
-            #elseif os(Linux)
-                try copyXattrsLinux(from: srcPath, to: dstFd)
             #else
-                // Unsupported platform - silently skip
+                // Linux xattr requires C shim (planned for future release)
+                // Other platforms - silently skip
                 _ = (srcPath, dstFd)
             #endif
         }
@@ -735,105 +734,9 @@
             }
         #endif
 
-        #if os(Linux)
-            private static func copyXattrsLinux(
-                from srcPath: String,
-                to dstFd: Int32
-            ) throws(File.System.Write.Atomic.Error) {
-                // Get list of xattr names
-                let listSize: Int = srcPath.withCString { llistxattr($0, nil, 0) }
-
-                if listSize < 0 {
-                    let e = errno
-                    if e == ENOTSUP || e == ENOENT { return }
-                    throw .metadataPreservationFailed(
-                        operation: "llistxattr",
-                        errno: e,
-                        message: File.System.Write.Atomic.errorMessage(for: e)
-                    )
-                }
-
-                if listSize == 0 { return }
-
-                var nameList = [CChar](repeating: 0, count: listSize)
-                let gotSize: Int = srcPath.withCString { path in
-                    nameList.withUnsafeMutableBufferPointer { buf in
-                        llistxattr(path, buf.baseAddress, listSize)
-                    }
-                }
-
-                if gotSize < 0 {
-                    let e = errno
-                    throw .metadataPreservationFailed(
-                        operation: "llistxattr(read)",
-                        errno: e,
-                        message: File.System.Write.Atomic.errorMessage(for: e)
-                    )
-                }
-
-                var offset = 0
-                while offset < gotSize {
-                    var end = offset
-                    while end < gotSize && nameList[end] != 0 { end += 1 }
-
-                    let name = String(
-                        decoding: nameList[offset..<end].map { UInt8(bitPattern: $0) },
-                        as: UTF8.self
-                    )
-                    offset = end + 1
-
-                    let valueSize: Int = srcPath.withCString { path in
-                        name.withCString { n in
-                            lgetxattr(path, n, nil, 0)
-                        }
-                    }
-
-                    if valueSize < 0 {
-                        let e = errno
-                        if e == ENODATA { continue }
-                        throw .metadataPreservationFailed(
-                            operation: "lgetxattr(\(name))",
-                            errno: e,
-                            message: File.System.Write.Atomic.errorMessage(for: e)
-                        )
-                    }
-
-                    var value = [UInt8](repeating: 0, count: valueSize)
-                    let gotValue: Int = srcPath.withCString { path in
-                        name.withCString { n in
-                            value.withUnsafeMutableBufferPointer { buf in
-                                lgetxattr(path, n, buf.baseAddress, valueSize)
-                            }
-                        }
-                    }
-
-                    if gotValue < 0 {
-                        let e = errno
-                        throw .metadataPreservationFailed(
-                            operation: "lgetxattr(\(name),read)",
-                            errno: e,
-                            message: File.System.Write.Atomic.errorMessage(for: e)
-                        )
-                    }
-
-                    let setRc: Int32 = name.withCString { n in
-                        value.withUnsafeBufferPointer { buf in
-                            Int32(fsetxattr(dstFd, n, buf.baseAddress, gotValue, 0))
-                        }
-                    }
-
-                    if setRc != 0 {
-                        let e = errno
-                        if e == ENOTSUP { continue }
-                        throw .metadataPreservationFailed(
-                            operation: "fsetxattr(\(name))",
-                            errno: e,
-                            message: File.System.Write.Atomic.errorMessage(for: e)
-                        )
-                    }
-                }
-            }
-        #endif
+        // Note: Linux xattr preservation requires C shim for llistxattr/lgetxattr/fsetxattr.
+        // These functions are not reliably exposed in Swift's Glibc overlay.
+        // Planned for future release with proper C interop target.
     }
 
     // MARK: - ACL Support

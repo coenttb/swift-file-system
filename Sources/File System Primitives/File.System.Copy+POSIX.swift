@@ -94,9 +94,9 @@
                 }
             }
 
-            // Linux: try kernel-assisted copy (copy_file_range → sendfile → manual)
+            // Linux: try kernel-assisted copy (sendfile → manual)
             #if os(Linux) && canImport(Glibc)
-                if try _copyLinuxFast(srcFd: srcFd, dstFd: dstFd, sourceSize: sourceStat.st_size) {
+                if try _copyLinuxFast(srcFd: srcFd, dstFd: dstFd, sourceSize: Int64(sourceStat.st_size)) {
                     if options.copyAttributes {
                         _ = fchmod(dstFd, sourceStat.st_mode & 0o7777)
                         var times = [
@@ -160,7 +160,6 @@
         // MARK: - Manual Loop Fallback
 
         /// Copies data using a manual read/write loop (64KB buffer).
-        @usableFromInline
         internal static func _copyManualLoop(
             srcFd: Int32,
             dstFd: Int32,
@@ -208,7 +207,6 @@
             /// Attempts kernel-assisted copy using Darwin copyfile().
             ///
             /// - Returns: `true` if copy succeeded, `false` if fallback needed.
-            @usableFromInline
             internal static func _copyDarwinFast(
                 from source: File.Path,
                 to destination: File.Path,
@@ -249,54 +247,35 @@
         // MARK: - Linux Fast Path
 
         #if os(Linux) && canImport(Glibc)
-            /// Attempts kernel-assisted copy using Linux copy_file_range/sendfile.
+            /// Attempts kernel-assisted copy using Linux sendfile.
+            ///
+            /// Uses sendfile for kernel-assisted copy. Falls back to manual loop
+            /// if sendfile is unavailable or fails.
+            ///
+            /// Note: copy_file_range would be faster for same-filesystem copies
+            /// but requires a C shim to access reliably. Planned for future release.
             ///
             /// - Returns: `true` if copy succeeded, `false` if fallback needed.
-            @usableFromInline
             internal static func _copyLinuxFast(
                 srcFd: Int32,
                 dstFd: Int32,
-                sourceSize: off_t
+                sourceSize: Int64
             ) throws(Error) -> Bool {
                 var remaining = sourceSize
-                var srcOffset: off_t = 0
-
-                // Try copy_file_range (kernel 4.5+, same filesystem optimization)
-                while remaining > 0 {
-                    let chunk = remaining > off_t(Int.max) ? Int.max : Int(remaining)
-                    let copied = Glibc.copy_file_range(srcFd, &srcOffset, dstFd, nil, chunk, 0)
-                    if copied < 0 {
-                        if errno == EXDEV || errno == ENOSYS || errno == EINVAL {
-                            break  // Not supported, fall back
-                        }
-                        throw .copyFailed(errno: errno, message: String(cString: strerror(errno)))
-                    }
-                    if copied == 0 {
-                        break
-                    }
-                    remaining -= off_t(copied)
-                }
-
-                if remaining == 0 {
-                    return true
-                }
-
-                // Fall back to sendfile (still kernel-assisted)
-                _ = lseek(srcFd, srcOffset, SEEK_SET)
 
                 while remaining > 0 {
-                    let chunk = remaining > off_t(Int.max) ? Int.max : Int(remaining)
-                    let sent = Glibc.sendfile(dstFd, srcFd, nil, chunk)
+                    let chunk = remaining > Int64(Int.max) ? Int.max : Int(remaining)
+                    let sent = sendfile(dstFd, srcFd, nil, chunk)
                     if sent < 0 {
                         if errno == ENOSYS || errno == EINVAL {
-                            return false  // Fall back to manual
+                            return false  // Fall back to manual loop
                         }
                         throw .copyFailed(errno: errno, message: String(cString: strerror(errno)))
                     }
                     if sent == 0 {
                         break
                     }
-                    remaining -= off_t(sent)
+                    remaining -= Int64(sent)
                 }
 
                 return remaining == 0

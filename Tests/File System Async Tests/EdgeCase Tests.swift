@@ -278,11 +278,11 @@ extension File.System.Async.Test.EdgeCase {
 
         // Create symlink to parent (cycle)
         let linkPath = try File.Path("\(subPath.string)/parent-link")
-        try File.System.Link.Symbolic.create(at: linkPath, pointingTo: root)
+        try await File.System.Link.Symbolic.create(at: linkPath, pointingTo: root)
 
         // Walk without following symlinks - should complete fine
         var count = 0
-        let walk = File.Directory.Async(io: io).walk(
+        let walk = File.Directory.walk(
             at: root,
             options: .init(followSymlinks: false)
         )
@@ -311,7 +311,7 @@ extension File.System.Async.Test.EdgeCase {
 
         // Create symlink to parent (cycle)
         let linkPath = try File.Path("\(subPath.string)/parent-link")
-        try File.System.Link.Symbolic.create(at: linkPath, pointingTo: root)
+        try await File.System.Link.Symbolic.create(at: linkPath, pointingTo: root)
 
         // Create a file so we can verify walk works
         let filePath = try File.Path("\(root.string)/file.txt")
@@ -319,7 +319,7 @@ extension File.System.Async.Test.EdgeCase {
 
         // Walk with following symlinks - cycle detection should prevent infinite loop
         var count = 0
-        let walk = File.Directory.Async(io: io).walk(at: root, options: .init(followSymlinks: true))
+        let walk = File.Directory.walk(at: root, options: .init(followSymlinks: true))
         for try await _ in walk {
             count += 1
             // Safety valve - if cycle detection fails, abort
@@ -373,14 +373,14 @@ extension File.System.Async.Test.EdgeCase {
 
         // Create symlink to file
         let linkPath = try File.Path("\(root.string)/link")
-        try File.System.Link.Symbolic.create(at: linkPath, pointingTo: filePath)
+        try await File.System.Link.Symbolic.create(at: linkPath, pointingTo: filePath)
 
         // Create file in subdir
         let subFilePath = try File.Path("\(subPath.string)/nested.txt")
         try createFile(at: subFilePath)
 
         var paths: [String] = []
-        let walk = File.Directory.Async(io: io).walk(at: root)
+        let walk = File.Directory.walk(at: root)
         for try await path in walk {
             if let component = path.lastComponent {
                 paths.append(component.string)
@@ -875,10 +875,9 @@ extension File.System.Async.Test.EdgeCase {
         }
 
         try createFile(at: target, content: [1, 2, 3])
-        try File.System.Link.Symbolic.create(at: link, pointingTo: target)
+        try await File.System.Link.Symbolic.create(at: link, pointingTo: target)
 
-        let system = File.System.Async(io: io)
-        let info = try await system.stat(link)
+        let info = try await File.System.Stat.info(at: link)
 
         // stat follows symlinks
         #expect(info.type == .regular)

@@ -99,7 +99,11 @@ extension File.System.Write.Append {
                 var written = 0
                 while written < count {
                     let remaining = count - written
-                    let w = Darwin.write(fd, base.advanced(by: written), remaining)
+                    #if canImport(Darwin)
+                        let w = Darwin.write(fd, base.advanced(by: written), remaining)
+                    #elseif canImport(Glibc)
+                        let w = Glibc.write(fd, base.advanced(by: written), remaining)
+                    #endif
 
                     if w > 0 {
                         written += w

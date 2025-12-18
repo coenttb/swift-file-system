@@ -268,11 +268,27 @@ extension File.Handle {
                     }
                     totalWritten += Int(written)
                 }
-            #else
+            #elseif canImport(Darwin)
                 var totalWritten = 0
                 while totalWritten < count {
                     let remaining = count - totalWritten
                     let w = Darwin.write(
+                        _descriptor.rawValue,
+                        base.advanced(by: totalWritten),
+                        remaining
+                    )
+                    if w > 0 {
+                        totalWritten += w
+                    } else if w < 0 {
+                        if errno == EINTR { continue }
+                        throw .writeFailed(errno: errno, message: String(cString: strerror(errno)))
+                    }
+                }
+            #elseif canImport(Glibc)
+                var totalWritten = 0
+                while totalWritten < count {
+                    let remaining = count - totalWritten
+                    let w = Glibc.write(
                         _descriptor.rawValue,
                         base.advanced(by: totalWritten),
                         remaining

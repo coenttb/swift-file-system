@@ -168,23 +168,16 @@ extension File.System.Async.Test.Performance {
             let testDir = tempDir.appending("perf_async_dir_\(UUID().uuidString)")
 
             // Setup
-            try File.System.Create.Directory.create(at: testDir)
+            try await File.System.Create.Directory.create(at: testDir)
             let fileData = [UInt8](repeating: 0x00, count: 10)
             for i in 0..<100 {
                 let filePath = testDir.appending("file_\(i).txt")
-                try fileData.withUnsafeBufferPointer { buffer in
-                    let span = Span<UInt8>(_unsafeElements: buffer)
-                    try File.System.Write.Atomic.write(span, to: filePath)
-                }
+                try await File.System.Write.Atomic.write(fileData, to: filePath)
             }
 
-            defer { try? File.System.Delete.delete(at: testDir, options: .init(recursive: true)) }
+            defer { Task { try? await File.System.Delete.delete(at: testDir, options: .init(recursive: true)) } }
 
-            let executor = File.IO.Executor()
-            defer { Task { await executor.shutdown() } }
-
-            let directory = File.Directory.Async(io: executor)
-            let entries = try await directory.contents(at: testDir)
+            let entries = try await File.Directory.contents(at: testDir)
             #expect(entries.count == 100)
         }
 
@@ -194,24 +187,17 @@ extension File.System.Async.Test.Performance {
             let testDir = tempDir.appending("perf_async_entries_\(UUID().uuidString)")
 
             // Setup
-            try File.System.Create.Directory.create(at: testDir)
+            try await File.System.Create.Directory.create(at: testDir)
             let fileData = [UInt8](repeating: 0x00, count: 10)
             for i in 0..<100 {
                 let filePath = testDir.appending("file_\(i).txt")
-                try fileData.withUnsafeBufferPointer { buffer in
-                    let span = Span<UInt8>(_unsafeElements: buffer)
-                    try File.System.Write.Atomic.write(span, to: filePath)
-                }
+                try await File.System.Write.Atomic.write(fileData, to: filePath)
             }
 
-            defer { try? File.System.Delete.delete(at: testDir, options: .init(recursive: true)) }
+            defer { Task { try? await File.System.Delete.delete(at: testDir, options: .init(recursive: true)) } }
 
-            let executor = File.IO.Executor()
-            defer { Task { await executor.shutdown() } }
-
-            let directory = File.Directory.Async(io: executor)
             var count = 0
-            for try await _ in directory.entries(at: testDir) {
+            for try await _ in File.Directory.entries(at: testDir) {
                 count += 1
             }
             #expect(count == 100)
@@ -223,30 +209,23 @@ extension File.System.Async.Test.Performance {
             let testDir = tempDir.appending("perf_walk_shallow_\(UUID().uuidString)")
 
             // Setup: 10 subdirs, each with 10 files = 100 files total + 10 dirs
-            try File.System.Create.Directory.create(at: testDir)
+            try await File.System.Create.Directory.create(at: testDir)
             let fileData = [UInt8](repeating: 0x00, count: 10)
 
             for i in 0..<10 {
                 let subDir = testDir.appending("dir_\(i)")
-                try File.System.Create.Directory.create(at: subDir)
+                try await File.System.Create.Directory.create(at: subDir)
 
                 for j in 0..<10 {
                     let filePath = subDir.appending("file_\(j).txt")
-                    try fileData.withUnsafeBufferPointer { buffer in
-                        let span = Span<UInt8>(_unsafeElements: buffer)
-                        try File.System.Write.Atomic.write(span, to: filePath)
-                    }
+                    try await File.System.Write.Atomic.write(fileData, to: filePath)
                 }
             }
 
-            defer { try? File.System.Delete.delete(at: testDir, options: .init(recursive: true)) }
+            defer { Task { try? await File.System.Delete.delete(at: testDir, options: .init(recursive: true)) } }
 
-            let executor = File.IO.Executor()
-            defer { Task { await executor.shutdown() } }
-
-            let directory = File.Directory.Async(io: executor)
             var count = 0
-            for try await _ in directory.walk(at: testDir) {
+            for try await _ in File.Directory.walk(at: testDir) {
                 count += 1
             }
             // 10 dirs + 100 files = 110 entries
@@ -259,7 +238,7 @@ extension File.System.Async.Test.Performance {
             let testDir = tempDir.appending("perf_walk_deep_\(UUID().uuidString)")
 
             // Setup: 5 levels deep with 3 files per level
-            try File.System.Create.Directory.create(at: testDir)
+            try await File.System.Create.Directory.create(at: testDir)
             let fileData = [UInt8](repeating: 0x00, count: 10)
 
             var currentDir = testDir
@@ -267,35 +246,25 @@ extension File.System.Async.Test.Performance {
                 // Add files at this level
                 for j in 0..<3 {
                     let filePath = currentDir.appending("file_\(j).txt")
-                    try fileData.withUnsafeBufferPointer { buffer in
-                        let span = Span<UInt8>(_unsafeElements: buffer)
-                        try File.System.Write.Atomic.write(span, to: filePath)
-                    }
+                    try await File.System.Write.Atomic.write(fileData, to: filePath)
                 }
 
                 // Create next level
                 let subDir = currentDir.appending("level_\(level)")
-                try File.System.Create.Directory.create(at: subDir)
+                try await File.System.Create.Directory.create(at: subDir)
                 currentDir = subDir
             }
 
             // Add files at deepest level
             for j in 0..<3 {
                 let filePath = currentDir.appending("file_\(j).txt")
-                try fileData.withUnsafeBufferPointer { buffer in
-                    let span = Span<UInt8>(_unsafeElements: buffer)
-                    try File.System.Write.Atomic.write(span, to: filePath)
-                }
+                try await File.System.Write.Atomic.write(fileData, to: filePath)
             }
 
-            defer { try? File.System.Delete.delete(at: testDir, options: .init(recursive: true)) }
+            defer { Task { try? await File.System.Delete.delete(at: testDir, options: .init(recursive: true)) } }
 
-            let executor = File.IO.Executor()
-            defer { Task { await executor.shutdown() } }
-
-            let directory = File.Directory.Async(io: executor)
             var count = 0
-            for try await _ in directory.walk(at: testDir) {
+            for try await _ in File.Directory.walk(at: testDir) {
                 count += 1
             }
             // 5 dirs + (6 levels × 3 files) = 5 + 18 = 23 entries
@@ -464,20 +433,17 @@ extension File.System.Async.Test.Performance {
             let testDir = tempDir.appending("perf_concurrent_\(UUID().uuidString)")
 
             // Setup: 10 files, 100KB each
-            try File.System.Create.Directory.create(at: testDir)
+            try await File.System.Create.Directory.create(at: testDir)
             let fileData = [UInt8](repeating: 0x55, count: 100_000)
 
             var filePaths: [File.Path] = []
             for i in 0..<10 {
                 let filePath = testDir.appending("file_\(i).bin")
-                try fileData.withUnsafeBufferPointer { buffer in
-                    let span = Span<UInt8>(_unsafeElements: buffer)
-                    try File.System.Write.Atomic.write(span, to: filePath)
-                }
+                try await File.System.Write.Atomic.write(fileData, to: filePath)
                 filePaths.append(filePath)
             }
 
-            defer { try? File.System.Delete.delete(at: testDir, options: .init(recursive: true)) }
+            defer { Task { try? await File.System.Delete.delete(at: testDir, options: .init(recursive: true)) } }
 
             let executor = File.IO.Executor()
             defer { Task { await executor.shutdown() } }
@@ -510,8 +476,8 @@ extension File.System.Async.Test.Performance {
             let tempDir = try File.Path(NSTemporaryDirectory())
             let testDir = tempDir.appending("perf_mixed_\(UUID().uuidString)")
 
-            try File.System.Create.Directory.create(at: testDir)
-            defer { try? File.System.Delete.delete(at: testDir, options: .init(recursive: true)) }
+            try await File.System.Create.Directory.create(at: testDir)
+            defer { Task { try? await File.System.Delete.delete(at: testDir, options: .init(recursive: true)) } }
 
             let executor = File.IO.Executor()
             defer { Task { await executor.shutdown() } }

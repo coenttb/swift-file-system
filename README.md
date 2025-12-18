@@ -101,22 +101,41 @@ Add to your target:
 
 ## Quick Start
 
-### Synchronous API
+### Sync and Async - Same API
+
+The same function names work for both sync and async - Swift picks based on context:
 
 ```swift
-import File_System
+import File_System        // Sync
+import File_System_Async  // Async (adds async overloads)
 
 // Read file
-let data = try File.System.Read.Full.read(from: path)
+let data = try File.System.Read.Full.read(from: path)             // sync
+let data = try await File.System.Read.Full.read(from: path)       // async
 
 // Write file atomically
-try File.System.Write.Atomic.write(data, to: path)
+try File.System.Write.Atomic.write(data, to: path)                // sync
+try await File.System.Write.Atomic.write(data, to: path)          // async
 
-// Copy with APFS clone (instant on same filesystem)
-try File.System.Copy.copy(from: source, to: destination)
+// Copy with APFS clone
+try File.System.Copy.copy(from: source, to: destination)          // sync
+try await File.System.Copy.copy(from: source, to: destination)    // async
 
-// Iterate directory
+// Check existence
+let exists = File.System.Stat.exists(at: path)                    // sync
+let exists = await File.System.Stat.exists(at: path)              // async
+```
+
+### Directory Iteration
+
+```swift
+// Sync - Sequence
 for entry in try File.Directory.Contents(at: directoryPath) {
+    print(entry.name)
+}
+
+// Async - AsyncSequence (batched, 48x faster)
+for try await entry in File.Directory.entries(at: directoryPath) {
     print(entry.name)
 }
 
@@ -126,28 +145,13 @@ for entry in try File.Directory.Walk(at: rootPath) {
 }
 ```
 
-### Async API
+### Streaming Bytes
 
 ```swift
-import File_System_Async
-
-// Stream file bytes (using shared default executor)
-for try await byte in File.Stream.Async(io: .default).bytes(from: path) {
-    process(byte)
+// Async byte streaming with backpressure
+for try await chunk in File.Stream.bytes(from: path) {
+    process(chunk)
 }
-
-// Async directory iteration (batched, 48x faster)
-for try await entry in File.Directory.Async(io: .default).entries(at: directoryPath) {
-    print(entry.name)
-}
-
-// Async file handle operations
-let handle = try await File.Handle.Async.open(path, mode: .readWrite, io: .default)
-let data = try await handle.read(upToCount: 1024)
-try await handle.write(contentsOf: newData)
-try await handle.close()
-
-// Note: .default executor is process-scoped, no shutdown needed
 ```
 
 ## Usage Examples
@@ -202,25 +206,6 @@ try File.System.Copy.copy(
 )
 ```
 
-### Dedicated Thread Pool (Advanced)
-
-```swift
-// For heavy blocking I/O, use a dedicated executor instead of .default
-let io = File.IO.Executor(.init(
-    workers: 4,
-    threadModel: .dedicated  // Uses DispatchQueue per worker
-))
-
-// Blocking I/O won't affect async tasks on cooperative pool
-try await io.run {
-    // Long-running blocking operation
-    Thread.sleep(forTimeInterval: 1.0)
-}
-
-// Explicit executors must be shut down when done
-await io.shutdown()
-```
-
 ### Directory Traversal with Filtering
 
 ```swift
@@ -238,14 +223,18 @@ for entry in try File.Directory.Walk(at: rootPath, options: options) {
 }
 ```
 
-### Streaming Bytes with Chunk Size
+### Custom Executor (Advanced)
 
 ```swift
-// Read in 64KB chunks
-let options = File.Stream.Async.BytesOptions(chunkSize: 64 * 1024)
-for try await chunk in File.Stream.Async(io: .default).bytes(from: path, options: options) {
-    processChunk(chunk)
-}
+// For heavy I/O, use a dedicated executor to avoid starving the cooperative pool
+let io = File.IO.Executor(.init(workers: 4, threadModel: .dedicated))
+
+// Pass custom executor to any operation
+let data = try await File.System.Read.Full.read(from: path, io: io)
+for try await entry in File.Directory.entries(at: path, io: io) { ... }
+
+// Explicit executors must be shut down when done
+await io.shutdown()
 ```
 
 ## Performance
