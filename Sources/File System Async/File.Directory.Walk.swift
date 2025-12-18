@@ -212,7 +212,10 @@ extension File.Directory.Async.WalkSequence {
             channel: AsyncThrowingChannel<Element, any Error>
         ) async {
             // Check if already done
-            guard await !authority.isComplete else { return }
+            guard await !authority.isComplete else {
+                await state.decrementActive()  // Don't leak worker count
+                return
+            }
 
             // Open iterator
             let boxResult: Result<IteratorBox, any Error> = await {
