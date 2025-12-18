@@ -214,11 +214,11 @@ extension File.Directory.Async.WalkSequence {
             guard await !authority.isComplete else { return }
 
             // Open iterator
-            let boxResult: Result<_IteratorBox, any Error> = await {
+            let boxResult: Result<IteratorBox, any Error> = await {
                 do {
                     let box = try await io.run {
                         let iterator = try File.Directory.Iterator.open(at: dir)
-                        return _IteratorBox(iterator)
+                        return IteratorBox(iterator)
                     }
                     return .success(box)
                 } catch {
@@ -427,35 +427,42 @@ private struct _InodeKey: Hashable, Sendable {
     let inode: UInt64
 }
 
-// MARK: - Iterator Box (reuse from Entries)
+// MARK: - Iterator Box
 
-/// Heap-allocated box for the non-copyable iterator.
-private final class _IteratorBox: @unchecked Sendable {
-    private var storage: UnsafeMutablePointer<File.Directory.Iterator>?
+extension File.Directory.Async.WalkSequence {
+    /// Heap-allocated box for the non-copyable iterator.
+    ///
+    /// ## Safety Invariant (for @unchecked Sendable)
+    /// - Only accessed from within `io.run` closures (single-threaded access)
+    /// - Never accessed concurrently
+    /// - Caller ensures sequential access pattern
+    fileprivate final class IteratorBox: @unchecked Sendable {
+        private var storage: UnsafeMutablePointer<File.Directory.Iterator>?
 
-    init(_ iterator: consuming File.Directory.Iterator) {
-        self.storage = .allocate(capacity: 1)
-        self.storage!.initialize(to: consume iterator)
-    }
+        init(_ iterator: consuming File.Directory.Iterator) {
+            self.storage = .allocate(capacity: 1)
+            self.storage!.initialize(to: consume iterator)
+        }
 
-    deinit {
-        if let ptr = storage {
+        deinit {
+            if let ptr = storage {
+                let it = ptr.move()
+                ptr.deallocate()
+                it.close()
+            }
+        }
+
+        func next() throws -> File.Directory.Entry? {
+            guard let ptr = storage else { return nil }
+            return try ptr.pointee.next()
+        }
+
+        func close() {
+            guard let ptr = storage else { return }
             let it = ptr.move()
             ptr.deallocate()
+            storage = nil
             it.close()
         }
-    }
-
-    func next() throws -> File.Directory.Entry? {
-        guard let ptr = storage else { return nil }
-        return try ptr.pointee.next()
-    }
-
-    func close() {
-        guard let ptr = storage else { return }
-        let it = ptr.move()
-        ptr.deallocate()
-        storage = nil
-        it.close()
     }
 }

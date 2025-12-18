@@ -125,11 +125,11 @@ extension File.Directory.Async.Entries {
             channel: AsyncThrowingChannel<Element, any Error>
         ) async {
             // Open iterator via io.run (blocking operation)
-            let iteratorResult: Result<_IteratorBox, any Error> = await {
+            let iteratorResult: Result<IteratorBox, any Error> = await {
                 do {
                     let box = try await io.run {
                         let iterator = try File.Directory.Iterator.open(at: path)
-                        return _IteratorBox(iterator)
+                        return IteratorBox(iterator)
                     }
                     return .success(box)
                 } catch {
@@ -181,7 +181,7 @@ extension File.Directory.Async.Entries {
             }
         }
 
-        private static func closeIterator(_ box: _IteratorBox, io: File.IO.Executor) async {
+        private static func closeIterator(_ box: IteratorBox, io: File.IO.Executor) async {
             _ = try? await io.run {
                 box.close()
             }
@@ -191,44 +191,46 @@ extension File.Directory.Async.Entries {
 
 // MARK: - Iterator Box
 
-/// Heap-allocated box for the non-copyable iterator.
-///
-/// Uses UnsafeMutablePointer for stable address with ~Copyable type,
-/// similar to HandleBox pattern.
-///
-/// ## Safety Invariant (for @unchecked Sendable)
-/// - Only accessed from within `io.run` closures (single-threaded access)
-/// - Never accessed concurrently
-/// - Caller ensures sequential access pattern
-private final class _IteratorBox: @unchecked Sendable {
-    private var storage: UnsafeMutablePointer<File.Directory.Iterator>?
+extension File.Directory.Async.Entries {
+    /// Heap-allocated box for the non-copyable iterator.
+    ///
+    /// Uses UnsafeMutablePointer for stable address with ~Copyable type,
+    /// similar to HandleBox pattern.
+    ///
+    /// ## Safety Invariant (for @unchecked Sendable)
+    /// - Only accessed from within `io.run` closures (single-threaded access)
+    /// - Never accessed concurrently
+    /// - Caller ensures sequential access pattern
+    fileprivate final class IteratorBox: @unchecked Sendable {
+        private var storage: UnsafeMutablePointer<File.Directory.Iterator>?
 
-    init(_ iterator: consuming File.Directory.Iterator) {
-        self.storage = .allocate(capacity: 1)
-        self.storage!.initialize(to: consume iterator)
-    }
+        init(_ iterator: consuming File.Directory.Iterator) {
+            self.storage = .allocate(capacity: 1)
+            self.storage!.initialize(to: consume iterator)
+        }
 
-    deinit {
-        // Best-effort cleanup if not explicitly closed
-        if let ptr = storage {
+        deinit {
+            // Best-effort cleanup if not explicitly closed
+            if let ptr = storage {
+                let it = ptr.move()
+                ptr.deallocate()
+                it.close()
+            }
+        }
+
+        func next() throws -> File.Directory.Entry? {
+            guard let ptr = storage else {
+                return nil
+            }
+            return try ptr.pointee.next()
+        }
+
+        func close() {
+            guard let ptr = storage else { return }
             let it = ptr.move()
             ptr.deallocate()
+            storage = nil
             it.close()
         }
-    }
-
-    func next() throws -> File.Directory.Entry? {
-        guard let ptr = storage else {
-            return nil
-        }
-        return try ptr.pointee.next()
-    }
-
-    func close() {
-        guard let ptr = storage else { return }
-        let it = ptr.move()
-        ptr.deallocate()
-        storage = nil
-        it.close()
     }
 }
