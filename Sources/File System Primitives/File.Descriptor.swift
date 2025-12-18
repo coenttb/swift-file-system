@@ -63,11 +63,7 @@ extension File {
             }
             #else
             if _fd >= 0 {
-                #if canImport(Darwin)
-                _ = Darwin.close(_fd)
-                #else
-                _ = close(_fd)
-                #endif
+                _ = _posixClose(_fd)
             }
             #endif
         }
@@ -213,15 +209,11 @@ extension File.Descriptor {
             throw .alreadyClosed
         }
         let fd = _fd
-        #if canImport(Darwin)
-        let closeResult = Darwin.close(fd)
-        #else
-        let closeResult = close(fd)
-        #endif
+        _fd = -1  // Invalidate first - fd is consumed regardless of close() result
+        let closeResult = _posixClose(fd)
         guard closeResult == 0 else {
             throw .closeFailed(errno: errno, message: String(cString: strerror(errno)))
         }
-        _fd = -1  // Only invalidate after successful close
         #endif
     }
 
@@ -308,6 +300,35 @@ extension File.Descriptor.Error: CustomStringConvertible {
         }
     }
 }
+
+// MARK: - POSIX Close Helper
+
+#if !os(Windows)
+/// Close a file descriptor with POSIX semantics.
+///
+/// Treats EINTR as "closed" - the file descriptor is consumed
+/// regardless of whether the kernel completed all cleanup.
+/// This follows the POSIX.1-2008 specification where a descriptor
+/// is always invalid after close(), even if EINTR occurs.
+///
+/// - Parameter fd: The file descriptor to close.
+/// - Returns: 0 on success, -1 on error (with errno set).
+@inline(__always)
+internal func _posixClose(_ fd: Int32) -> Int32 {
+    #if canImport(Darwin)
+    let result = Darwin.close(fd)
+    #else
+    let result = close(fd)
+    #endif
+
+    // EINTR on close is treated as closed - the fd is now invalid
+    // and must not be retried (which would potentially close a recycled fd)
+    if result == -1 && errno == EINTR {
+        return 0
+    }
+    return result
+}
+#endif
 
 // MARK: - UnsafeSendable Helper
 
