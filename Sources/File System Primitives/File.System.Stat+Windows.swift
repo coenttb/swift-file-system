@@ -15,16 +15,52 @@ extension File.System.Stat {
     internal static func _infoWindows(at path: File.Path) throws(Error) -> File.System.Metadata.Info {
         var findData = WIN32_FIND_DATAW()
 
-        let handle = path.string.withCString(encodedAs: UTF16.self) { wpath in
+        let findHandle = path.string.withCString(encodedAs: UTF16.self) { wpath in
             FindFirstFileW(wpath, &findData)
         }
 
-        guard handle != INVALID_HANDLE_VALUE else {
+        guard findHandle != INVALID_HANDLE_VALUE else {
             throw _mapWindowsError(GetLastError(), path: path)
         }
-        FindClose(handle)
+        FindClose(findHandle)
 
-        return _makeInfo(from: findData)
+        // Best-effort file identity: try to get volume serial + file index
+        let (deviceId, fileIndex) = _getFileIdentity(at: path)
+
+        return _makeInfo(from: findData, deviceId: deviceId, fileIndex: fileIndex)
+    }
+
+    /// Gets file identity (volume serial + file index) for cycle detection.
+    ///
+    /// Uses GetFileInformationByHandle to get stable identity that works
+    /// even for junctions and symlinks. Returns (0, 0) if unavailable.
+    @usableFromInline
+    internal static func _getFileIdentity(at path: File.Path) -> (deviceId: UInt64, fileIndex: UInt64) {
+        let handle = path.string.withCString(encodedAs: UTF16.self) { wpath in
+            CreateFileW(
+                wpath,
+                0, // No access needed, just querying info
+                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                nil,
+                OPEN_EXISTING,
+                FILE_FLAG_BACKUP_SEMANTICS, // Required for directories
+                nil
+            )
+        }
+
+        guard handle != INVALID_HANDLE_VALUE else {
+            return (0, 0)
+        }
+        defer { CloseHandle(handle) }
+
+        var info = BY_HANDLE_FILE_INFORMATION()
+        guard GetFileInformationByHandle(handle, &info) else {
+            return (0, 0)
+        }
+
+        let deviceId = UInt64(info.dwVolumeSerialNumber)
+        let fileIndex = UInt64(info.nFileIndexHigh) << 32 | UInt64(info.nFileIndexLow)
+        return (deviceId, fileIndex)
     }
 
     /// Checks if path exists using Windows APIs.
@@ -48,7 +84,11 @@ extension File.System.Stat {
 
     /// Creates Info from Windows find data.
     @usableFromInline
-    internal static func _makeInfo(from data: WIN32_FIND_DATAW) -> File.System.Metadata.Info {
+    internal static func _makeInfo(
+        from data: WIN32_FIND_DATAW,
+        deviceId: UInt64 = 0,
+        fileIndex: UInt64 = 0
+    ) -> File.System.Metadata.Info {
         let fileType: File.System.Metadata.FileType
         if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 {
             fileType = .directory
@@ -79,8 +119,8 @@ extension File.System.Stat {
             owner: ownership,
             timestamps: timestamps,
             type: fileType,
-            inode: 0, // Windows doesn't have inodes
-            deviceId: 0,
+            inode: fileIndex, // Windows file index serves as inode equivalent
+            deviceId: deviceId, // Volume serial number
             linkCount: 1
         )
     }
