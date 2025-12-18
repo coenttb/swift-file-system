@@ -16,7 +16,12 @@ import Musl
 #endif
 
 extension File.System.Copy {
-    /// Copies a file using POSIX APIs.
+    /// Copies a file using POSIX APIs with kernel-assisted fast paths.
+    ///
+    /// ## Fallback Ladder
+    /// - **Darwin**: copyfile(CLONE_FORCE) → copyfile(ALL/DATA) → manual loop
+    /// - **Linux**: copy_file_range → sendfile → manual loop
+    /// - **Other POSIX**: manual loop only
     internal static func _copyPOSIX(
         from source: File.Path,
         to destination: File.Path,
@@ -48,6 +53,13 @@ extension File.System.Copy {
             throw .destinationExists(destination)
         }
 
+        // Darwin: try kernel-assisted copy first (before opening fds)
+        #if canImport(Darwin)
+        if _copyDarwinFast(from: source, to: destination, options: options) {
+            return
+        }
+        #endif
+
         // Open source for reading
         let srcFd = open(source.string, O_RDONLY)
         guard srcFd >= 0 else {
@@ -71,54 +83,29 @@ extension File.System.Copy {
             }
         }
 
-        // Copy data
-        let bufferSize = 64 * 1024 // 64KB buffer
-        var buffer = [UInt8](repeating: 0, count: bufferSize)
-
-        while true {
-            #if canImport(Darwin)
-            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
-                guard let base = ptr.baseAddress else { return 0 }
-                return Darwin.read(srcFd, base, bufferSize)
+        // Linux: try kernel-assisted copy (copy_file_range → sendfile → manual)
+        #if os(Linux) && canImport(Glibc)
+        if try _copyLinuxFast(srcFd: srcFd, dstFd: dstFd, sourceSize: sourceStat.st_size) {
+            if options.copyAttributes {
+                _ = fchmod(dstFd, sourceStat.st_mode & 0o7777)
+                var times = [
+                    timespec(tv_sec: sourceStat.st_atim.tv_sec, tv_nsec: sourceStat.st_atim.tv_nsec),
+                    timespec(tv_sec: sourceStat.st_mtim.tv_sec, tv_nsec: sourceStat.st_mtim.tv_nsec)
+                ]
+                _ = futimens(dstFd, &times)
             }
-            #elseif canImport(Glibc)
-            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
-                guard let base = ptr.baseAddress else { return 0 }
-                return Glibc.read(srcFd, base, bufferSize)
-            }
-            #elseif canImport(Musl)
-            let bytesRead = buffer.withUnsafeMutableBufferPointer { ptr -> Int in
-                guard let base = ptr.baseAddress else { return 0 }
-                return Musl.read(srcFd, base, bufferSize)
-            }
-            #endif
-
-            if bytesRead < 0 {
-                if errno == EINTR { continue }
-                throw _mapErrno(errno, source: source, destination: destination)
-            }
-            if bytesRead == 0 { break } // EOF
-
-            var written = 0
-            while written < bytesRead {
-                let w = buffer.withUnsafeBufferPointer { ptr -> Int in
-                    guard let base = ptr.baseAddress else { return 0 }
-                    return write(dstFd, base.advanced(by: written), bytesRead - written)
-                }
-                if w < 0 {
-                    if errno == EINTR { continue }
-                    throw _mapErrno(errno, source: source, destination: destination)
-                }
-                written += w
-            }
+            success = true
+            return
         }
+        #endif
+
+        // Fallback: manual buffer copy
+        try _copyManualLoop(srcFd: srcFd, dstFd: dstFd, source: source, destination: destination)
 
         // Copy attributes if requested
         if options.copyAttributes {
-            // Copy permissions
             _ = fchmod(dstFd, sourceStat.st_mode & 0o7777)
 
-            // Copy timestamps
             #if canImport(Darwin)
             var times = [
                 timespec(tv_sec: sourceStat.st_atimespec.tv_sec, tv_nsec: sourceStat.st_atimespec.tv_nsec),
@@ -135,6 +122,144 @@ extension File.System.Copy {
 
         success = true
     }
+
+    // MARK: - Manual Loop Fallback
+
+    /// Copies data using a manual read/write loop (64KB buffer).
+    @usableFromInline
+    internal static func _copyManualLoop(
+        srcFd: Int32,
+        dstFd: Int32,
+        source: File.Path,
+        destination: File.Path
+    ) throws(Error) {
+        let bufferSize = 64 * 1024
+        var buffer = [UInt8](repeating: 0, count: bufferSize)
+
+        while true {
+            let bytesRead: Int = buffer.withUnsafeMutableBufferPointer { ptr in
+                guard let base = ptr.baseAddress else { return 0 }
+                return read(srcFd, base, bufferSize)
+            }
+
+            if bytesRead < 0 {
+                if errno == EINTR { continue }
+                throw _mapErrno(errno, source: source, destination: destination)
+            }
+
+            if bytesRead == 0 {
+                return // EOF
+            }
+
+            var written = 0
+            while written < bytesRead {
+                let w: Int = buffer.withUnsafeBufferPointer { ptr in
+                    guard let base = ptr.baseAddress else { return 0 }
+                    return write(dstFd, base.advanced(by: written), bytesRead - written)
+                }
+
+                if w < 0 {
+                    if errno == EINTR { continue }
+                    throw _mapErrno(errno, source: source, destination: destination)
+                }
+
+                written += w
+            }
+        }
+    }
+
+    // MARK: - Darwin Fast Path
+
+    #if canImport(Darwin)
+    /// Attempts kernel-assisted copy using Darwin copyfile().
+    ///
+    /// - Returns: `true` if copy succeeded, `false` if fallback needed.
+    @usableFromInline
+    internal static func _copyDarwinFast(
+        from source: File.Path,
+        to destination: File.Path,
+        options: Options
+    ) -> Bool {
+        var flags: copyfile_flags_t = copyfile_flags_t(options.copyAttributes ? COPYFILE_ALL : COPYFILE_DATA)
+        if !options.followSymlinks {
+            flags |= copyfile_flags_t(COPYFILE_NOFOLLOW)
+        }
+        if options.overwrite {
+            flags |= copyfile_flags_t(COPYFILE_UNLINK)
+        }
+
+        // Try clone first (APFS instant copy - metadata only)
+        if copyfile(source.string, destination.string, nil, flags | copyfile_flags_t(COPYFILE_CLONE_FORCE)) == 0 {
+            return true
+        }
+
+        // Fall back to full kernel copy
+        if copyfile(source.string, destination.string, nil, flags) == 0 {
+            return true
+        }
+
+        return false
+    }
+    #endif
+
+    // MARK: - Linux Fast Path
+
+    #if os(Linux) && canImport(Glibc)
+    /// Attempts kernel-assisted copy using Linux copy_file_range/sendfile.
+    ///
+    /// - Returns: `true` if copy succeeded, `false` if fallback needed.
+    @usableFromInline
+    internal static func _copyLinuxFast(
+        srcFd: Int32,
+        dstFd: Int32,
+        sourceSize: off_t
+    ) throws(Error) -> Bool {
+        var remaining = sourceSize
+        var srcOffset: off_t = 0
+
+        // Try copy_file_range (kernel 4.5+, same filesystem optimization)
+        while remaining > 0 {
+            let chunk = remaining > off_t(Int.max) ? Int.max : Int(remaining)
+            let copied = Glibc.copy_file_range(srcFd, &srcOffset, dstFd, nil, chunk, 0)
+            if copied < 0 {
+                if errno == EXDEV || errno == ENOSYS || errno == EINVAL {
+                    break  // Not supported, fall back
+                }
+                throw .copyFailed(errno: errno, message: String(cString: strerror(errno)))
+            }
+            if copied == 0 {
+                break
+            }
+            remaining -= off_t(copied)
+        }
+
+        if remaining == 0 {
+            return true
+        }
+
+        // Fall back to sendfile (still kernel-assisted)
+        _ = lseek(srcFd, srcOffset, SEEK_SET)
+
+        while remaining > 0 {
+            let chunk = remaining > off_t(Int.max) ? Int.max : Int(remaining)
+            let sent = Glibc.sendfile(dstFd, srcFd, nil, chunk)
+            if sent < 0 {
+                if errno == ENOSYS || errno == EINVAL {
+                    return false  // Fall back to manual
+                }
+                throw .copyFailed(errno: errno, message: String(cString: strerror(errno)))
+            }
+            if sent == 0 {
+                break
+            }
+            remaining -= off_t(sent)
+        }
+
+        return remaining == 0
+    }
+    #endif
+
+    // MARK: - Error Mapping
 
     /// Maps errno to copy error.
     private static func _mapErrno(_ errno: Int32, source: File.Path, destination: File.Path) -> Error {
