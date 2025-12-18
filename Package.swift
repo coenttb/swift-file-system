@@ -25,6 +25,7 @@ let package = Package(
             dependencies: [
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "Binary", package: "swift-standards"),
+                .product(name: "StandardTime", package: "swift-standards"),
                 .product(name: "INCITS 4 1986", package: "swift-incits-4-1986"),
                 .product(name: "RFC 4648", package: "swift-rfc-4648"),
             ],

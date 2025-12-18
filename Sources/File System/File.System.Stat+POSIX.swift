@@ -15,6 +15,8 @@ import Glibc
 import Musl
 #endif
 
+import StandardTime
+
 extension File.System.Stat {
     /// Gets file info using POSIX stat.
     internal static func _infoPOSIX(at path: File.Path) throws(Error) -> File.System.Metadata.Info {
@@ -72,25 +74,48 @@ extension File.System.Stat {
             gid: statBuf.st_gid
         )
 
+        // stat nanoseconds are always valid (0-999,999,999)
         #if canImport(Darwin)
+        let accessTime = try! Time(
+            secondsSinceEpoch: Int(statBuf.st_atimespec.tv_sec),
+            nanoseconds: Int(statBuf.st_atimespec.tv_nsec)
+        )
+        let modificationTime = try! Time(
+            secondsSinceEpoch: Int(statBuf.st_mtimespec.tv_sec),
+            nanoseconds: Int(statBuf.st_mtimespec.tv_nsec)
+        )
+        let changeTime = try! Time(
+            secondsSinceEpoch: Int(statBuf.st_ctimespec.tv_sec),
+            nanoseconds: Int(statBuf.st_ctimespec.tv_nsec)
+        )
+        let creationTime = try! Time(
+            secondsSinceEpoch: Int(statBuf.st_birthtimespec.tv_sec),
+            nanoseconds: Int(statBuf.st_birthtimespec.tv_nsec)
+        )
         let timestamps = File.System.Metadata.Timestamps(
-            accessTime: Int64(statBuf.st_atimespec.tv_sec),
-            accessTimeNanoseconds: Int64(statBuf.st_atimespec.tv_nsec),
-            modificationTime: Int64(statBuf.st_mtimespec.tv_sec),
-            modificationTimeNanoseconds: Int64(statBuf.st_mtimespec.tv_nsec),
-            changeTime: Int64(statBuf.st_ctimespec.tv_sec),
-            changeTimeNanoseconds: Int64(statBuf.st_ctimespec.tv_nsec),
-            creationTime: Int64(statBuf.st_birthtimespec.tv_sec),
-            creationTimeNanoseconds: Int64(statBuf.st_birthtimespec.tv_nsec)
+            accessTime: accessTime,
+            modificationTime: modificationTime,
+            changeTime: changeTime,
+            creationTime: creationTime
         )
         #else
+        let accessTime = try! Time(
+            secondsSinceEpoch: Int(statBuf.st_atim.tv_sec),
+            nanoseconds: Int(statBuf.st_atim.tv_nsec)
+        )
+        let modificationTime = try! Time(
+            secondsSinceEpoch: Int(statBuf.st_mtim.tv_sec),
+            nanoseconds: Int(statBuf.st_mtim.tv_nsec)
+        )
+        let changeTime = try! Time(
+            secondsSinceEpoch: Int(statBuf.st_ctim.tv_sec),
+            nanoseconds: Int(statBuf.st_ctim.tv_nsec)
+        )
         let timestamps = File.System.Metadata.Timestamps(
-            accessTime: Int64(statBuf.st_atim.tv_sec),
-            accessTimeNanoseconds: Int64(statBuf.st_atim.tv_nsec),
-            modificationTime: Int64(statBuf.st_mtim.tv_sec),
-            modificationTimeNanoseconds: Int64(statBuf.st_mtim.tv_nsec),
-            changeTime: Int64(statBuf.st_ctim.tv_sec),
-            changeTimeNanoseconds: Int64(statBuf.st_ctim.tv_nsec)
+            accessTime: accessTime,
+            modificationTime: modificationTime,
+            changeTime: changeTime,
+            creationTime: nil
         )
         #endif
 

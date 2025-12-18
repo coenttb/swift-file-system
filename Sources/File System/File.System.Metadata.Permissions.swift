@@ -5,6 +5,16 @@
 //  Created by Coen ten Thije Boonkkamp on 17/12/2025.
 //
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import WinSDK
+#endif
+
 extension File.System.Metadata {
     /// POSIX file permissions.
     public struct Permissions: OptionSet, Sendable {
@@ -47,5 +57,117 @@ extension File.System.Metadata {
 
         /// Executable file permissions (755).
         public static let executable: Permissions = [.ownerAll, .groupRead, .groupExecute, .otherRead, .otherExecute]
+    }
+}
+
+// MARK: - Error
+
+extension File.System.Metadata.Permissions {
+    /// Errors that can occur during permission operations.
+    public enum Error: Swift.Error, Equatable, Sendable {
+        case pathNotFound(File.Path)
+        case permissionDenied(File.Path)
+        case operationFailed(errno: Int32, message: String)
+    }
+}
+
+// MARK: - Get/Set API
+
+extension File.System.Metadata.Permissions {
+    /// Gets the permissions of a file.
+    ///
+    /// - Parameter path: The path to the file.
+    /// - Returns: The file permissions.
+    /// - Throws: `File.System.Metadata.Permissions.Error` on failure.
+    public static func get(at path: File.Path) throws(Error) -> Self {
+        #if os(Windows)
+        // Windows doesn't have POSIX permissions
+        return .defaultFile
+        #else
+        var statBuf = stat()
+        guard stat(path.string, &statBuf) == 0 else {
+            throw _mapErrno(errno, path: path)
+        }
+        return Self(rawValue: UInt16(statBuf.st_mode & 0o7777))
+        #endif
+    }
+
+    /// Sets the permissions of a file.
+    ///
+    /// - Parameters:
+    ///   - permissions: The permissions to set.
+    ///   - path: The path to the file.
+    /// - Throws: `File.System.Metadata.Permissions.Error` on failure.
+    public static func set(_ permissions: Self, at path: File.Path) throws(Error) {
+        #if os(Windows)
+        // Windows doesn't have POSIX permissions - this is a no-op
+        return
+        #else
+        guard chmod(path.string, mode_t(permissions.rawValue)) == 0 else {
+            throw _mapErrno(errno, path: path)
+        }
+        #endif
+    }
+
+    /// Gets the permissions of a file.
+    ///
+    /// Async variant.
+    public static func get(at path: File.Path) async throws(Error) -> Self {
+        #if os(Windows)
+        return .defaultFile
+        #else
+        var statBuf = stat()
+        guard stat(path.string, &statBuf) == 0 else {
+            throw _mapErrno(errno, path: path)
+        }
+        return Self(rawValue: UInt16(statBuf.st_mode & 0o7777))
+        #endif
+    }
+
+    /// Sets the permissions of a file.
+    ///
+    /// Async variant.
+    public static func set(_ permissions: Self, at path: File.Path) async throws(Error) {
+        #if os(Windows)
+        return
+        #else
+        guard chmod(path.string, mode_t(permissions.rawValue)) == 0 else {
+            throw _mapErrno(errno, path: path)
+        }
+        #endif
+    }
+
+    #if !os(Windows)
+    private static func _mapErrno(_ errno: Int32, path: File.Path) -> Error {
+        switch errno {
+        case ENOENT:
+            return .pathNotFound(path)
+        case EACCES, EPERM:
+            return .permissionDenied(path)
+        default:
+            let message: String
+            if let cString = strerror(errno) {
+                message = String(cString: cString)
+            } else {
+                message = "Unknown error"
+            }
+            return .operationFailed(errno: errno, message: message)
+        }
+    }
+    #endif
+}
+
+// MARK: - CustomStringConvertible for Error
+
+extension File.System.Metadata.Permissions.Error: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .pathNotFound(let path):
+            return "Path not found: \(path)"
+        case .permissionDenied(let path):
+            return "Permission denied: \(path)"
+        case .operationFailed(let errno, let message):
+            return "Operation failed: \(message) (errno=\(errno))"
+        }
     }
 }
