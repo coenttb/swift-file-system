@@ -6,7 +6,9 @@ Type-safe file system operations for Swift with kernel-assisted I/O and async st
 
 ## Table of Contents
 
+- [Why swift-file-system?](#why-swift-file-system)
 - [Overview](#overview)
+- [Design Guarantees](#design-guarantees)
 - [Features](#features)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
@@ -14,14 +16,49 @@ Type-safe file system operations for Swift with kernel-assisted I/O and async st
 - [Performance](#performance)
 - [Architecture](#architecture)
 - [Platform Support](#platform-support)
+- [Non-goals](#non-goals)
 - [Testing](#testing)
 - [Related Packages](#related-packages)
 - [Contributing](#contributing)
 - [License](#license)
 
+## Why swift-file-system?
+
+Foundation's `FileManager` and `URL` APIs are designed for simplicity, not performance or async correctness. This library exists to solve problems Foundation cannot:
+
+| Problem | Foundation | swift-file-system |
+|---------|------------|-------------------|
+| **Async iteration** | Blocks thread per entry | Batched async with 48x fewer executor hops |
+| **File copy** | Always reads+writes bytes | APFS clone (0.2ms), kernel-assisted paths |
+| **Durability control** | No control over fsync | `.full`, `.dataOnly`, `.none` modes |
+| **Thread pool starvation** | Blocking I/O starves cooperative pool | Dedicated executor option isolates I/O |
+| **Concurrency safety** | Requires manual synchronization | `Sendable` throughout, actor-isolated state |
+| **Symlink handling** | Implicit, inconsistent | Explicit `followSymlinks` option everywhere |
+
+If you need predictable async behavior, kernel-level optimizations, or fine-grained durability control, this library provides what Foundation cannot.
+
 ## Overview
 
 swift-file-system provides a modern Swift interface for file system operations with focus on performance, safety, and async-first design. Built on POSIX and Windows APIs with platform-specific optimizations like APFS cloning on macOS and `copy_file_range`/`sendfile` on Linux.
+
+## Design Guarantees
+
+### What this library guarantees
+
+- **Atomic writes**: Write-sync-rename pattern ensures no partial writes on crash (when durability is `.full` or `.dataOnly`)
+- **Bounded memory**: Async executor queue is bounded; backpressure suspends callers when full
+- **Fallback correctness**: Copy operations try fast paths first, fall back gracefully to manual loop
+- **No data races**: Full Swift 6 strict concurrency compliance with `Sendable` types throughout
+- **Graceful shutdown**: In-flight operations complete; pending operations fail with explicit error
+
+### What this library does NOT guarantee
+
+- **Cross-process consistency**: No file locking primitives (yet); concurrent access from multiple processes requires external coordination
+- **Path normalization**: `File.Path` validates structure (no NUL bytes, no empty components) but does not resolve `..`, symlinks, or canonicalize case
+- **Windows path semantics**: UNC paths (`\\server\share`) and drive-relative paths (`C:foo`) are not fully validated
+- **Security sandbox**: This is not a security boundary; path traversal prevention is best-effort, not hardened
+
+Use `File.Path` for structured path manipulation, but do not rely on it as a security mechanism.
 
 ## Features
 
@@ -30,7 +67,7 @@ swift-file-system provides a modern Swift interface for file system operations w
 - **Async streaming**: `AsyncSequence` for file bytes, directory entries, and recursive walks
 - **Atomic writes**: Crash-safe write-sync-rename pattern with configurable durability modes
 - **Dedicated I/O executor**: Actor-based thread pool that doesn't starve Swift's cooperative pool
-- **Type-safe paths**: Validated paths with component operations and traversal protection
+- **Validated paths**: `File.Path` rejects NUL bytes, empty components, and embedded newlines
 - **Swift 6 strict concurrency**: Full `Sendable` compliance, no data races
 - **Cross-platform**: macOS, iOS, Linux, and Windows support
 
@@ -240,6 +277,17 @@ The async executor maintains bounded memory regardless of workload:
 - Batched iteration reduces intermediate allocations
 - Handle store tracks open files without leaks
 
+### Methodology
+
+Performance numbers are indicative, not guarantees. Measured on:
+- Apple Silicon M1 (8 cores), 24 GB RAM
+- macOS 26.0, Swift 6.2
+- Release builds (`swift build -c release`)
+- Warm filesystem cache (files read once before timing)
+- APFS filesystem on internal NVMe SSD
+
+Your results will vary based on hardware, filesystem, and workload characteristics.
+
 ## Architecture
 
 ### Layers
@@ -271,12 +319,42 @@ The async executor maintains bounded memory regardless of workload:
 
 ## Platform Support
 
+### Core Filesystem Operations
+
+| Platform | Status | Optimizations |
+|----------|--------|---------------|
+| macOS | Full | APFS cloning, `copyfile()`, kernel-assisted copy |
+| iOS | Full | Same as macOS |
+| Linux | Full | `copy_file_range`, `sendfile` |
+| Windows | Partial | `CopyFileW`, some features pending |
+
+### Async I/O
+
 | Platform | Status | Notes |
 |----------|--------|-------|
-| macOS | Full support | APFS cloning, `copyfile()`, file watching |
-| iOS | Full support | Same as macOS |
-| Linux | Full support | `copy_file_range`, `sendfile`, inotify ready |
-| Windows | Partial | Core operations, some features pending |
+| macOS | Full | Cooperative and dedicated thread models |
+| iOS | Full | Same as macOS |
+| Linux | Full | Same as macOS |
+| Windows | Planned | Executor architecture ready |
+
+### File Watching
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| macOS | Planned | FSEvents integration pending |
+| iOS | Planned | FSEvents integration pending |
+| Linux | Planned | inotify integration pending |
+| Windows | Planned | ReadDirectoryChangesW pending |
+
+## Non-goals
+
+This library intentionally does not provide:
+
+- **Virtual filesystem abstraction**: No pluggable backends or mock filesystems. Use protocol abstraction at a higher layer if needed.
+- **Security sandbox**: Path validation is structural, not a security boundary. Do not use `File.Path` to prevent directory traversal attacks in untrusted input.
+- **Database replacement**: For transactional semantics across multiple files, use SQLite or a proper database.
+- **Watcher-first design**: File watching is planned but not the primary focus. For complex watching needs, consider dedicated solutions.
+- **Complete Windows parity**: Windows support covers core operations; advanced features (ACLs, alternate data streams) are not prioritized.
 
 ## Testing
 
@@ -324,7 +402,7 @@ Contributions welcome. Please:
 
 Areas for contribution:
 - Windows feature parity
-- File watching implementation
+- File watching implementation (FSEvents, inotify)
 - Performance optimizations
 - Additional edge case coverage
 
