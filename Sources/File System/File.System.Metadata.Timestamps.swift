@@ -15,7 +15,7 @@ import Musl
 import WinSDK
 #endif
 
-import StandardTime
+@_spi(Internal) import StandardTime
 
 extension File.System.Metadata {
     /// File timestamp information.
@@ -128,21 +128,24 @@ extension File.System.Metadata.Timestamps {
             throw _mapErrno(errno, path: path)
         }
 
-        // stat nanoseconds are always valid (0-999,999,999)
         #if canImport(Darwin)
-        let accessTime = try! Time(
+        let accessTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_atimespec.tv_sec),
             nanoseconds: Int(statBuf.st_atimespec.tv_nsec)
         )
-        let modificationTime = try! Time(
+        let modificationTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_mtimespec.tv_sec),
             nanoseconds: Int(statBuf.st_mtimespec.tv_nsec)
         )
-        let changeTime = try! Time(
+        let changeTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_ctimespec.tv_sec),
             nanoseconds: Int(statBuf.st_ctimespec.tv_nsec)
         )
-        let creationTime = try! Time(
+        let creationTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_birthtimespec.tv_sec),
             nanoseconds: Int(statBuf.st_birthtimespec.tv_nsec)
         )
@@ -153,16 +156,19 @@ extension File.System.Metadata.Timestamps {
             creationTime: creationTime
         )
         #else
-        // Linux: no birthtime, use timespec fields
-        let accessTime = try! Time(
+        // Linux: no birthtime
+        let accessTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_atim.tv_sec),
             nanoseconds: Int(statBuf.st_atim.tv_nsec)
         )
-        let modificationTime = try! Time(
+        let modificationTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_mtim.tv_sec),
             nanoseconds: Int(statBuf.st_mtim.tv_nsec)
         )
-        let changeTime = try! Time(
+        let changeTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_ctim.tv_sec),
             nanoseconds: Int(statBuf.st_ctim.tv_nsec)
         )
@@ -289,8 +295,7 @@ extension File.System.Metadata.Timestamps {
         let unixIntervals = intervals - 116444736000000000 // Difference between 1601 and 1970 in 100ns
         let seconds = Int(unixIntervals / 10_000_000)
         let nanoseconds = Int((unixIntervals % 10_000_000) * 100)
-        // FILETIME nanoseconds are always valid
-        return try! Time(secondsSinceEpoch: seconds, nanoseconds: nanoseconds)
+        return Time(__unchecked: (), secondsSinceEpoch: seconds, nanoseconds: nanoseconds)
     }
 
     /// Converts Time to Windows FILETIME.

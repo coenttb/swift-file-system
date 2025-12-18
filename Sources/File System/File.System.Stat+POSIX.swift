@@ -15,7 +15,7 @@ import Glibc
 import Musl
 #endif
 
-import StandardTime
+@_spi(Internal) import StandardTime
 
 extension File.System.Stat {
     /// Gets file info using POSIX stat.
@@ -74,21 +74,24 @@ extension File.System.Stat {
             gid: statBuf.st_gid
         )
 
-        // stat nanoseconds are always valid (0-999,999,999)
         #if canImport(Darwin)
-        let accessTime = try! Time(
+        let accessTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_atimespec.tv_sec),
             nanoseconds: Int(statBuf.st_atimespec.tv_nsec)
         )
-        let modificationTime = try! Time(
+        let modificationTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_mtimespec.tv_sec),
             nanoseconds: Int(statBuf.st_mtimespec.tv_nsec)
         )
-        let changeTime = try! Time(
+        let changeTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_ctimespec.tv_sec),
             nanoseconds: Int(statBuf.st_ctimespec.tv_nsec)
         )
-        let creationTime = try! Time(
+        let creationTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_birthtimespec.tv_sec),
             nanoseconds: Int(statBuf.st_birthtimespec.tv_nsec)
         )
@@ -99,15 +102,18 @@ extension File.System.Stat {
             creationTime: creationTime
         )
         #else
-        let accessTime = try! Time(
+        let accessTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_atim.tv_sec),
             nanoseconds: Int(statBuf.st_atim.tv_nsec)
         )
-        let modificationTime = try! Time(
+        let modificationTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_mtim.tv_sec),
             nanoseconds: Int(statBuf.st_mtim.tv_nsec)
         )
-        let changeTime = try! Time(
+        let changeTime = Time(
+            __unchecked: (),
             secondsSinceEpoch: Int(statBuf.st_ctim.tv_sec),
             nanoseconds: Int(statBuf.st_ctim.tv_nsec)
         )
