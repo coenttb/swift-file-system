@@ -30,7 +30,10 @@ extension File {
     /// defer { try? descriptor.close() }
     /// // use descriptor...
     /// ```
-    public struct Descriptor: ~Copyable, Sendable {
+    /// A non-Sendable owning handle. For cross-task usage, either:
+    /// - Move into an actor for serialized access
+    /// - Use `duplicated()` to create an independent copy
+    public struct Descriptor: ~Copyable {
         #if os(Windows)
         @usableFromInline
         internal var _handle: UnsafeSendable<HANDLE?>
@@ -200,10 +203,11 @@ extension File.Descriptor {
         guard let handle = _handle.value, handle != INVALID_HANDLE_VALUE else {
             throw .alreadyClosed
         }
-        _handle = UnsafeSendable(INVALID_HANDLE_VALUE)
         guard CloseHandle(handle) else {
-            throw .closeFailed(errno: Int32(GetLastError()), message: "CloseHandle failed")
+            let error = GetLastError()
+            throw .closeFailed(errno: Int32(error), message: Self._formatWindowsError(error))
         }
+        _handle = UnsafeSendable(INVALID_HANDLE_VALUE)  // Only invalidate after successful close
         #else
         guard _fd >= 0 else {
             throw .alreadyClosed

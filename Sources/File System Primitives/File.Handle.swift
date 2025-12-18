@@ -30,7 +30,8 @@ extension File {
     /// let data = try handle.read(count: 100)
     /// handle.close()
     /// ```
-    public struct Handle: ~Copyable, Sendable {
+    /// A non-Sendable owning handle. For cross-task usage, move into an actor.
+    public struct Handle: ~Copyable {
         /// The underlying file descriptor.
         private var _descriptor: File.Descriptor
         /// The mode this handle was opened with.

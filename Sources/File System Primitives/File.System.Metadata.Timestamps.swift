@@ -95,27 +95,6 @@ extension File.System.Metadata.Timestamps {
         #endif
     }
 
-    /// Gets the timestamps of a file.
-    ///
-    /// Async variant.
-    public static func get(at path: File.Path) async throws(Error) -> Self {
-        #if os(Windows)
-        return try _getWindows(path)
-        #else
-        return try _getPOSIX(path)
-        #endif
-    }
-
-    /// Sets the timestamps of a file.
-    ///
-    /// Async variant.
-    public static func set(_ timestamps: Self, at path: File.Path) async throws(Error) {
-        #if os(Windows)
-        try _setWindows(timestamps, at: path)
-        #else
-        try _setPOSIX(timestamps, at: path)
-        #endif
-    }
 }
 
 // MARK: - POSIX Implementation

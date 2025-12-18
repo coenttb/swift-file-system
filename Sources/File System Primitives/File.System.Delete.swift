@@ -76,27 +76,6 @@ extension File.System.Delete {
         #endif
     }
 
-    /// Deletes a file or empty directory at the specified path.
-    ///
-    /// Async variant.
-    public static func delete(at path: File.Path) async throws(Error) {
-        #if os(Windows)
-        try _deleteWindows(at: path, options: Options())
-        #else
-        try _deletePOSIX(at: path, options: Options())
-        #endif
-    }
-
-    /// Deletes a file or directory at the specified path with options.
-    ///
-    /// Async variant.
-    public static func delete(at path: File.Path, options: Options) async throws(Error) {
-        #if os(Windows)
-        try _deleteWindows(at: path, options: options)
-        #else
-        try _deletePOSIX(at: path, options: options)
-        #endif
-    }
 }
 
 // MARK: - CustomStringConvertible for Error

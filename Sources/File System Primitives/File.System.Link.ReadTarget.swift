@@ -48,16 +48,6 @@ extension File.System.Link.ReadTarget {
         #endif
     }
 
-    /// Reads the target of a symbolic link.
-    ///
-    /// Async variant.
-    public static func target(of path: File.Path) async throws(Error) -> File.Path {
-        #if os(Windows)
-        return try _targetWindows(of: path)
-        #else
-        return try _targetPOSIX(of: path)
-        #endif
-    }
 }
 
 // MARK: - POSIX Implementation

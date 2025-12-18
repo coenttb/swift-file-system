@@ -20,7 +20,7 @@ extension File {
     ///
     /// Async variant.
     public func read() async throws -> [UInt8] {
-        try await File.System.Read.Full.read(from: path)
+        try File.System.Read.Full.read(from: path)
     }
 
     /// Reads the file contents as a UTF-8 string.
@@ -36,7 +36,7 @@ extension File {
     ///
     /// Async variant.
     public func readString() async throws -> String {
-        let bytes = try await File.System.Read.Full.read(from: path)
+        let bytes = try File.System.Read.Full.read(from: path)
         return String(decoding: bytes, as: UTF8.self)
     }
 }
@@ -219,7 +219,7 @@ extension File {
     ///
     /// Async variant.
     public func delete() async throws {
-        try await File.System.Delete.delete(at: path)
+        try File.System.Delete.delete(at: path)
     }
 
     /// Copies the file to a destination path.

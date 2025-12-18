@@ -49,16 +49,6 @@ extension File.System.Link.Symbolic {
         #endif
     }
 
-    /// Creates a symbolic link at the specified path pointing to target.
-    ///
-    /// Async variant.
-    public static func create(at path: File.Path, pointingTo target: File.Path) async throws(Error) {
-        #if os(Windows)
-        try _createWindows(at: path, pointingTo: target)
-        #else
-        try _createPOSIX(at: path, pointingTo: target)
-        #endif
-    }
 }
 
 // MARK: - POSIX Implementation

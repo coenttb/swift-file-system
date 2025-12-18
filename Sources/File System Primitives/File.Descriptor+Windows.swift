@@ -18,7 +18,8 @@ extension File.Descriptor {
         options: Options
     ) throws(Error) -> File.Descriptor {
         var desiredAccess: DWORD = 0
-        var shareMode: DWORD = FILE_SHARE_READ | FILE_SHARE_WRITE
+        // Include FILE_SHARE_DELETE for POSIX-like rename/unlink semantics
+        var shareMode: DWORD = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE
         var creationDisposition: DWORD = OPEN_EXISTING
         var flagsAndAttributes: DWORD = FILE_ATTRIBUTE_NORMAL
 
@@ -73,7 +74,11 @@ extension File.Descriptor {
 
         // Close on exec - prevent handle inheritance
         if options.contains(.closeOnExec) {
-            SetHandleInformation(handle, DWORD(HANDLE_FLAG_INHERIT), 0)
+            guard SetHandleInformation(handle, DWORD(HANDLE_FLAG_INHERIT), 0) else {
+                let error = GetLastError()
+                CloseHandle(handle)
+                throw .openFailed(errno: Int32(error), message: "SetHandleInformation failed: \(_formatWindowsError(error))")
+            }
         }
 
         return File.Descriptor(__unchecked: handle)

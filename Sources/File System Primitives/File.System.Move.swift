@@ -88,34 +88,6 @@ extension File.System.Move {
         #endif
     }
 
-    /// Moves (renames) a file from source to destination.
-    ///
-    /// Async variant.
-    public static func move(
-        from source: File.Path,
-        to destination: File.Path
-    ) async throws(Error) {
-        #if os(Windows)
-        try _moveWindows(from: source, to: destination, options: Options())
-        #else
-        try _movePOSIX(from: source, to: destination, options: Options())
-        #endif
-    }
-
-    /// Moves (renames) a file from source to destination with options.
-    ///
-    /// Async variant.
-    public static func move(
-        from source: File.Path,
-        to destination: File.Path,
-        options: Options
-    ) async throws(Error) {
-        #if os(Windows)
-        try _moveWindows(from: source, to: destination, options: options)
-        #else
-        try _movePOSIX(from: source, to: destination, options: options)
-        #endif
-    }
 }
 
 // MARK: - CustomStringConvertible for Error

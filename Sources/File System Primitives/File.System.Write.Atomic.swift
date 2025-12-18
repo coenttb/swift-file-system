@@ -116,20 +116,6 @@ extension File.System.Write {
             #endif
         }
 
-        /// Atomically writes bytes to a file path.
-        ///
-        /// Async variant of the core primitive.
-        public static func write(
-            _ bytes: borrowing Span<UInt8>,
-            to path: File.Path,
-            options: borrowing Options = Options()
-        ) async throws(Error) {
-            #if os(Windows)
-            try WindowsAtomic.writeSpan(bytes, to: path.string, options: options)
-            #else
-            try POSIXAtomic.writeSpan(bytes, to: path.string, options: options)
-            #endif
-        }
     }
 }
 
@@ -155,18 +141,6 @@ extension File.System.Write.Atomic {
         }
     }
 
-    /// Atomically writes a Binary.Serializable value to a file path.
-    ///
-    /// Async variant.
-    public static func write<S: Binary.Serializable>(
-        _ value: S,
-        to path: File.Path,
-        options: Options = Options()
-    ) async throws(Error) {
-        try S.withSerializedBytes(value) { (span: borrowing Span<UInt8>) throws(Error) in
-            try write(span, to: path, options: options)
-        }
-    }
 }
 
 // MARK: - Internal Helpers

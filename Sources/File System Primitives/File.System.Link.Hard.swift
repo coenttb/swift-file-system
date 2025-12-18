@@ -51,16 +51,6 @@ extension File.System.Link.Hard {
         #endif
     }
 
-    /// Creates a hard link at the specified path to an existing file.
-    ///
-    /// Async variant.
-    public static func create(at path: File.Path, to existing: File.Path) async throws(Error) {
-        #if os(Windows)
-        try _createWindows(at: path, to: existing)
-        #else
-        try _createPOSIX(at: path, to: existing)
-        #endif
-    }
 }
 
 // MARK: - POSIX Implementation

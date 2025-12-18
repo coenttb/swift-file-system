@@ -90,67 +90,6 @@ extension File.System.Stat {
     }
 }
 
-// MARK: - Async API
-
-extension File.System.Stat {
-    /// Gets file metadata information.
-    ///
-    /// Async variant.
-    public static func info(at path: File.Path) async throws(Error) -> File.System.Metadata.Info {
-        #if os(Windows)
-        return try _infoWindows(at: path)
-        #else
-        return try _infoPOSIX(at: path)
-        #endif
-    }
-
-    /// Checks if a path exists.
-    ///
-    /// Async variant.
-    public static func exists(at path: File.Path) async -> Bool {
-        #if os(Windows)
-        return _existsWindows(at: path)
-        #else
-        return _existsPOSIX(at: path)
-        #endif
-    }
-
-    /// Checks if the path is a regular file.
-    ///
-    /// Async variant.
-    public static func isFile(at path: File.Path) async -> Bool {
-        #if os(Windows)
-        guard let info = try? _infoWindows(at: path) else { return false }
-        #else
-        guard let info = try? _infoPOSIX(at: path) else { return false }
-        #endif
-        return info.type == .regular
-    }
-
-    /// Checks if the path is a directory.
-    ///
-    /// Async variant.
-    public static func isDirectory(at path: File.Path) async -> Bool {
-        #if os(Windows)
-        guard let info = try? _infoWindows(at: path) else { return false }
-        #else
-        guard let info = try? _infoPOSIX(at: path) else { return false }
-        #endif
-        return info.type == .directory
-    }
-
-    /// Checks if the path is a symbolic link.
-    ///
-    /// Async variant.
-    public static func isSymlink(at path: File.Path) async -> Bool {
-        #if os(Windows)
-        return _isSymlinkWindows(at: path)
-        #else
-        return _isSymlinkPOSIX(at: path)
-        #endif
-    }
-}
-
 // MARK: - CustomStringConvertible for Error
 
 extension File.System.Stat.Error: CustomStringConvertible {

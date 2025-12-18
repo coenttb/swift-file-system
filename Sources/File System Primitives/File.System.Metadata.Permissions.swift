@@ -109,34 +109,6 @@ extension File.System.Metadata.Permissions {
         #endif
     }
 
-    /// Gets the permissions of a file.
-    ///
-    /// Async variant.
-    public static func get(at path: File.Path) async throws(Error) -> Self {
-        #if os(Windows)
-        return .defaultFile
-        #else
-        var statBuf = stat()
-        guard stat(path.string, &statBuf) == 0 else {
-            throw _mapErrno(errno, path: path)
-        }
-        return Self(rawValue: UInt16(statBuf.st_mode & 0o7777))
-        #endif
-    }
-
-    /// Sets the permissions of a file.
-    ///
-    /// Async variant.
-    public static func set(_ permissions: Self, at path: File.Path) async throws(Error) {
-        #if os(Windows)
-        return
-        #else
-        guard chmod(path.string, mode_t(permissions.rawValue)) == 0 else {
-            throw _mapErrno(errno, path: path)
-        }
-        #endif
-    }
-
     #if !os(Windows)
     private static func _mapErrno(_ errno: Int32, path: File.Path) -> Error {
         switch errno {

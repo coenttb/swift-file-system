@@ -54,19 +54,6 @@ extension File.System.Write.Append {
         #endif
     }
 
-    /// Appends bytes to a file.
-    ///
-    /// Async variant.
-    public static func append(
-        _ bytes: borrowing Span<UInt8>,
-        to path: File.Path
-    ) async throws(Error) {
-        #if os(Windows)
-        try _appendWindows(bytes, to: path)
-        #else
-        try _appendPOSIX(bytes, to: path)
-        #endif
-    }
 }
 
 // MARK: - Binary.Serializable
@@ -87,17 +74,6 @@ extension File.System.Write.Append {
         }
     }
 
-    /// Appends a Binary.Serializable value to a file.
-    ///
-    /// Async variant.
-    public static func append<S: Binary.Serializable>(
-        _ value: S,
-        to path: File.Path
-    ) async throws(Error) {
-        try S.withSerializedBytes(value) { (span: borrowing Span<UInt8>) throws(Error) in
-            try append(span, to: path)
-        }
-    }
 }
 
 // MARK: - POSIX Implementation

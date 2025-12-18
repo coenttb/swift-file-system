@@ -98,34 +98,6 @@ extension File.System.Copy {
         #endif
     }
 
-    /// Copies a file from source to destination.
-    ///
-    /// Async variant.
-    public static func copy(
-        from source: File.Path,
-        to destination: File.Path
-    ) async throws(Error) {
-        #if os(Windows)
-        try _copyWindows(from: source, to: destination, options: Options())
-        #else
-        try _copyPOSIX(from: source, to: destination, options: Options())
-        #endif
-    }
-
-    /// Copies a file from source to destination with options.
-    ///
-    /// Async variant.
-    public static func copy(
-        from source: File.Path,
-        to destination: File.Path,
-        options: Options
-    ) async throws(Error) {
-        #if os(Windows)
-        try _copyWindows(from: source, to: destination, options: options)
-        #else
-        try _copyPOSIX(from: source, to: destination, options: options)
-        #endif
-    }
 }
 
 // MARK: - CustomStringConvertible for Error

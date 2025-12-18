@@ -82,34 +82,6 @@ extension File.System.Metadata.Ownership {
         #endif
     }
 
-    /// Gets the ownership of a file.
-    ///
-    /// Async variant.
-    public static func get(at path: File.Path) async throws(Error) -> Self {
-        #if os(Windows)
-        return Self(uid: 0, gid: 0)
-        #else
-        var statBuf = stat()
-        guard stat(path.string, &statBuf) == 0 else {
-            throw _mapErrno(errno, path: path)
-        }
-        return Self(uid: statBuf.st_uid, gid: statBuf.st_gid)
-        #endif
-    }
-
-    /// Sets the ownership of a file.
-    ///
-    /// Async variant.
-    public static func set(_ ownership: Self, at path: File.Path) async throws(Error) {
-        #if os(Windows)
-        return
-        #else
-        guard chown(path.string, ownership.uid, ownership.gid) == 0 else {
-            throw _mapErrno(errno, path: path)
-        }
-        #endif
-    }
-
     #if !os(Windows)
     private static func _mapErrno(_ errno: Int32, path: File.Path) -> Error {
         switch errno {

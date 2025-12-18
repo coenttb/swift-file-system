@@ -138,11 +138,8 @@ extension File.Directory.Iterator {
                 continue
             }
 
-            // Build full path
-            let entryPathString = _basePath.string + "/" + name
-            guard let entryPath = try? File.Path(entryPathString) else {
-                continue
-            }
+            // Build full path using proper path composition
+            let entryPath = _basePath.appending(name)
 
             // Determine type
             let entryType: File.Directory.EntryType
@@ -159,7 +156,7 @@ extension File.Directory.Iterator {
             }
             #else
             var entryStat = stat()
-            if lstat(entryPathString, &entryStat) == 0 {
+            if lstat(entryPath.string, &entryStat) == 0 {
                 switch entryStat.st_mode & S_IFMT {
                 case S_IFREG:
                     entryType = .file
@@ -259,12 +256,8 @@ extension File.Directory.Iterator {
                 continue
             }
 
-            // Build full path
-            let entryPathString = _basePath.string + "\\" + name
-            guard let entryPath = try? File.Path(entryPathString) else {
-                if !_hasMore { return nil }
-                continue
-            }
+            // Build full path using proper path composition
+            let entryPath = _basePath.appending(name)
 
             // Determine type (from previous findData)
             let entryType: File.Directory.EntryType

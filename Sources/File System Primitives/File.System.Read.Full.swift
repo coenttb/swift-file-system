@@ -51,16 +51,6 @@ extension File.System.Read.Full {
         #endif
     }
 
-    /// Reads the entire contents of a file into memory.
-    ///
-    /// Async variant of the core read primitive.
-    public static func read(from path: File.Path) async throws(Error) -> [UInt8] {
-        #if os(Windows)
-        return try _readWindows(from: path)
-        #else
-        return try _readPOSIX(from: path)
-        #endif
-    }
 }
 
 // MARK: - CustomStringConvertible for Error

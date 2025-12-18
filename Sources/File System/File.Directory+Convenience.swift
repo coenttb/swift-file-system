@@ -22,7 +22,7 @@ extension File.Directory {
     /// Async variant.
     public func create(withIntermediates: Bool = false) async throws {
         let options = File.System.Create.Directory.Options(createIntermediates: withIntermediates)
-        try await File.System.Create.Directory.create(at: path, options: options)
+        try File.System.Create.Directory.create(at: path, options: options)
     }
 
     /// Deletes the directory.
@@ -39,7 +39,7 @@ extension File.Directory {
     /// Async variant.
     public func delete(recursive: Bool = false) async throws {
         let options = File.System.Delete.Options(recursive: recursive)
-        try await File.System.Delete.delete(at: path, options: options)
+        try File.System.Delete.delete(at: path, options: options)
     }
 }
 

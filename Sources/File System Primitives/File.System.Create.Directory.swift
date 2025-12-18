@@ -82,27 +82,6 @@ extension File.System.Create.Directory {
         #endif
     }
 
-    /// Creates a directory at the specified path.
-    ///
-    /// Async variant.
-    public static func create(at path: File.Path) async throws(Error) {
-        #if os(Windows)
-        try _createWindows(at: path, options: Options())
-        #else
-        try _createPOSIX(at: path, options: Options())
-        #endif
-    }
-
-    /// Creates a directory at the specified path with options.
-    ///
-    /// Async variant.
-    public static func create(at path: File.Path, options: Options) async throws(Error) {
-        #if os(Windows)
-        try _createWindows(at: path, options: options)
-        #else
-        try _createPOSIX(at: path, options: options)
-        #endif
-    }
 }
 
 // MARK: - CustomStringConvertible for Error
