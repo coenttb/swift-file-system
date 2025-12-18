@@ -15,6 +15,6 @@ extension Test {
     struct Performance {}
 }
 
-extension File.System.Async {
+extension File.IO {
     typealias Test = Testing.Test
 }

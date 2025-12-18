@@ -88,7 +88,6 @@ Add to your target:
     name: "YourTarget",
     dependencies: [
         .product(name: "File System", package: "swift-file-system"),
-        .product(name: "File System Async", package: "swift-file-system"),
     ]
 )
 ```
@@ -101,48 +100,96 @@ Add to your target:
 
 ## Quick Start
 
-### Sync and Async - Same API
-
-The same function names work for both sync and async - Swift picks based on context:
+### File Operations
 
 ```swift
-import File_System        // Sync
-import File_System_Async  // Async (adds async overloads)
+import File_System
 
-// Read file
-let data = try File.System.Read.Full.read(from: path)             // sync
-let data = try await File.System.Read.Full.read(from: path)       // async
+// Create a file reference
+let file: File = "/tmp/data.txt"
 
-// Write file atomically
-try File.System.Write.Atomic.write(data, to: path)                // sync
-try await File.System.Write.Atomic.write(data, to: path)          // async
+// Read and write
+let data = try file.read()                    // sync
+let data = try await file.read()              // async
 
-// Copy with APFS clone
-try File.System.Copy.copy(from: source, to: destination)          // sync
-try await File.System.Copy.copy(from: source, to: destination)    // async
+try file.write("Hello, World!")               // sync
+try await file.write("Hello, World!")         // async
 
-// Check existence
-let exists = File.System.Stat.exists(at: path)                    // sync
-let exists = await File.System.Stat.exists(at: path)              // async
+// Append
+try file.append(" More content")
+
+// Check properties
+if file.exists && file.isFile {
+    print("Size: \(try file.size)")
+    print("Empty: \(try file.isEmpty)")
+}
+
+// File operations
+try file.copy(to: otherFile)
+try file.move(to: newLocation)
+try file.delete()
 ```
 
-### Directory Iteration
+### Low-Level Handle Access
 
 ```swift
-// Sync - Sequence
-for entry in try File.Directory.Contents(at: directoryPath) {
+// Scoped handle access with automatic cleanup
+try file.open { handle in
+    let chunk = try handle.read(count: 1024)
+}
+
+try file.open.write { handle in
+    try handle.write(bytes)
+}
+
+// Static API works too
+try File.open(path).readWrite { handle in
+    try handle.seek(to: 100)
+    try handle.write(data)
+}
+```
+
+### Directory Operations
+
+```swift
+let dir: File.Directory = "/tmp/mydir"
+
+// Create and delete
+try dir.create(withIntermediates: true)
+try dir.delete(recursive: true)
+
+// Contents
+for entry in try dir.contents() {
     print(entry.name)
 }
 
-// Async - AsyncSequence (batched, 48x faster)
-for try await entry in File.Directory.entries(at: directoryPath) {
+// Subscript access
+let readme = dir[file: "README.md"]
+let subdir = dir[directory: "src"]
+
+// Async iteration (batched, 48x faster)
+for try await entry in File.Directory.entries(at: dir.path) {
     print(entry.name)
 }
 
 // Recursive walk
-for entry in try File.Directory.Walk(at: rootPath) {
+for entry in try File.Directory.Walk(at: dir.path) {
     print("\(entry.depth): \(entry.path)")
 }
+```
+
+### Sync and Async - Same API
+
+The same method names work for both sync and async - Swift picks based on context:
+
+```swift
+// Convenience API
+let data = try file.read()              // sync
+let data = try await file.read()        // async
+
+// Primitive API (for advanced options)
+try File.System.Write.Atomic.write(data, to: path, options: .init(durability: .full))
+try await File.System.Write.Atomic.write(data, to: path, options: .init(durability: .full))
 ```
 
 ### Streaming Bytes
@@ -156,7 +203,24 @@ for try await chunk in File.Stream.bytes(from: path) {
 
 ## Usage Examples
 
-### Atomic Writes with Durability
+### Basic File Operations
+
+```swift
+let file: File = "/tmp/config.json"
+
+// Simple read/write (uses safe defaults)
+try file.write(jsonString)
+let content = try file.readString()
+
+// Copy and move
+let backup = File("/tmp/config.backup.json")
+try file.copy(to: backup)
+try file.move(to: File("/tmp/new-location.json"))
+```
+
+### Advanced Write Options (Durability)
+
+Use the primitive API when you need fine-grained control:
 
 ```swift
 // Full durability (F_FULLFSYNC on Darwin, fsync on Linux)
@@ -181,7 +245,7 @@ try File.System.Write.Atomic.write(
 )
 ```
 
-### File Copy Options
+### Advanced Copy Options
 
 ```swift
 // Copy with attributes (permissions, timestamps)
@@ -191,19 +255,36 @@ try File.System.Copy.copy(
     options: .init(copyAttributes: true, overwrite: true)
 )
 
-// Copy data only (uses default permissions)
-try File.System.Copy.copy(
-    from: source,
-    to: destination,
-    options: .init(copyAttributes: false)
-)
-
-// Handle symlinks
+// Handle symlinks explicitly
 try File.System.Copy.copy(
     from: source,
     to: destination,
     options: .init(followSymlinks: false)  // Copy symlink itself
 )
+```
+
+### Directory Operations
+
+```swift
+let projectDir: File.Directory = "/Users/me/project"
+
+// Create directory structure
+try projectDir.create(withIntermediates: true)
+let srcDir = projectDir[directory: "src"]
+try srcDir.create()
+
+// List contents
+let files = try projectDir.files()
+let subdirs = try projectDir.subdirectories()
+
+// Check if empty
+if try projectDir.isEmpty {
+    try projectDir.delete()
+}
+
+// Copy/move directories
+try projectDir.copy(to: File.Directory("/tmp/backup"))
+try projectDir.move(to: File.Directory("/Users/me/new-project"))
 ```
 
 ### Directory Traversal with Filtering
@@ -279,13 +360,21 @@ Your results will vary based on hardware, filesystem, and workload characteristi
 
 ```
 ┌─────────────────────────────────────────────┐
-│              File System Async              │  ← AsyncSequence, executor, handles
+│                 File System                 │  ← Public API: File, File.Directory
 ├─────────────────────────────────────────────┤
-│             File System Primitives          │  ← Sync operations, platform abstraction
+│   File System Primitives + Async (internal) │  ← Sync/async ops, platform abstraction
 ├─────────────────────────────────────────────┤
 │          POSIX / Windows / Darwin           │  ← System calls
 └─────────────────────────────────────────────┘
 ```
+
+### API Levels
+
+| Level | Types | Use Case |
+|-------|-------|----------|
+| **Convenience** | `File`, `File.Directory` | Most common operations |
+| **Open/Handle** | `file.open`, `File.Handle` | Scoped low-level access |
+| **Primitive** | `File.System.*` | Advanced options (durability, symlinks) |
 
 ### Copy Fallback Ladder
 

@@ -369,14 +369,6 @@ extension File.Handle {
         #endif
     }
 
-    /// Returns the current position in the file.
-    ///
-    /// - Returns: The current file position.
-    /// - Throws: `File.Handle.Error` on failure.
-    public mutating func position() throws(Error) -> Int64 {
-        try seek(to: 0, from: .current)
-    }
-
     /// Syncs the file to disk.
     ///
     /// - Throws: `File.Handle.Error` on failure.

@@ -172,7 +172,8 @@ extension File.System.Stat {
         io: File.IO.Executor = .default
     ) async -> Bool {
         do {
-            return try await io.run { isFile(at: path) }
+            let metadata = try await io.run { try File.System.Stat.info(at: path) }
+            return metadata.type == .regular
         } catch {
             return false
         }
@@ -184,7 +185,8 @@ extension File.System.Stat {
         io: File.IO.Executor = .default
     ) async -> Bool {
         do {
-            return try await io.run { isDirectory(at: path) }
+            let metadata = try await io.run { try File.System.Stat.info(at: path) }
+            return metadata.type == .directory
         } catch {
             return false
         }
@@ -196,7 +198,8 @@ extension File.System.Stat {
         io: File.IO.Executor = .default
     ) async -> Bool {
         do {
-            return try await io.run { isSymlink(at: path) }
+            let metadata = try await io.run { try File.System.Stat.lstatInfo(at: path) }
+            return metadata.type == .symbolicLink
         } catch {
             return false
         }

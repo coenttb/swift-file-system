@@ -20,7 +20,7 @@ extension File {
     ///
     /// Async variant.
     public func read() async throws -> [UInt8] {
-        try File.System.Read.Full.read(from: path)
+        try await File.System.Read.Full.read(from: path)
     }
 
     /// Reads the file contents as a UTF-8 string.
@@ -36,7 +36,7 @@ extension File {
     ///
     /// Async variant.
     public func readString() async throws -> String {
-        let bytes = try File.System.Read.Full.read(from: path)
+        let bytes = try await File.System.Read.Full.read(from: path)
         return String(decoding: bytes, as: UTF8.self)
     }
 }
@@ -59,10 +59,7 @@ extension File {
     ///
     /// Async variant.
     public func write(_ bytes: [UInt8]) async throws {
-        try bytes.withUnsafeBufferPointer { buffer in
-            let span = Span<UInt8>(_unsafeElements: buffer)
-            try File.System.Write.Atomic.write(span, to: path)
-        }
+        try await File.System.Write.Atomic.write(bytes, to: path)
     }
 
     /// Writes a string to the file atomically (UTF-8 encoded).
@@ -97,12 +94,7 @@ extension File {
     ///
     /// Async variant.
     public func append(_ bytes: [UInt8]) async throws {
-        try File.Handle.open(path, options: [.create]).appending { handle in
-            try bytes.withUnsafeBufferPointer { buffer in
-                let span = Span<UInt8>(_unsafeElements: buffer)
-                try handle.write(span)
-            }
-        }
+        try await File.System.Write.Append.append(bytes, to: path)
     }
 
     /// Appends a string to the file (UTF-8 encoded).
@@ -203,6 +195,15 @@ extension File {
             try info.permissions
         }
     }
+
+    /// Returns `true` if the file is empty (size is 0).
+    ///
+    /// - Throws: `File.System.Stat.Error` on failure.
+    public var isEmpty: Bool {
+        get throws {
+            try size == 0
+        }
+    }
 }
 
 // MARK: - File Operations
@@ -219,7 +220,7 @@ extension File {
     ///
     /// Async variant.
     public func delete() async throws {
-        try File.System.Delete.delete(at: path)
+        try await File.System.Delete.delete(at: path)
     }
 
     /// Copies the file to a destination path.

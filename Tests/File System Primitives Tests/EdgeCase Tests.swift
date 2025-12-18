@@ -343,8 +343,8 @@ extension File.System.Test.EdgeCase {
         // Create symlink to non-existent target
         try File.System.Link.Symbolic.create(at: linkPath, pointingTo: targetPath)
 
-        // The symlink itself exists
-        #expect(File.System.Stat.isSymlink(at: linkPath))
+        // The symlink itself exists (use lstat which doesn't follow)
+        #expect((try? File.System.Stat.lstatInfo(at: linkPath))?.type == .symbolicLink)
 
         // But stat (which follows) should fail
         #expect(throws: File.System.Stat.Error.self) {
@@ -369,9 +369,9 @@ extension File.System.Test.EdgeCase {
         try File.System.Link.Symbolic.create(at: linkA, pointingTo: linkB)
         try File.System.Link.Symbolic.create(at: linkB, pointingTo: linkA)
 
-        // Both links exist as symlinks
-        #expect(File.System.Stat.isSymlink(at: linkA))
-        #expect(File.System.Stat.isSymlink(at: linkB))
+        // Both links exist as symlinks (use lstat which doesn't follow)
+        #expect((try? File.System.Stat.lstatInfo(at: linkA))?.type == .symbolicLink)
+        #expect((try? File.System.Stat.lstatInfo(at: linkB))?.type == .symbolicLink)
 
         // stat should fail with loop error
         #expect(throws: File.System.Stat.Error.self) {
@@ -387,7 +387,7 @@ extension File.System.Test.EdgeCase {
         // Create link pointing to itself
         try File.System.Link.Symbolic.create(at: linkPath, pointingTo: linkPath)
 
-        #expect(File.System.Stat.isSymlink(at: linkPath))
+        #expect((try? File.System.Stat.lstatInfo(at: linkPath))?.type == .symbolicLink)
 
         // stat should fail
         #expect(throws: File.System.Stat.Error.self) {

@@ -22,7 +22,7 @@ extension File.Directory {
     /// Async variant.
     public func create(withIntermediates: Bool = false) async throws {
         let options = File.System.Create.Directory.Options(createIntermediates: withIntermediates)
-        try File.System.Create.Directory.create(at: path, options: options)
+        try await File.System.Create.Directory.create(at: path, options: options)
     }
 
     /// Deletes the directory.
@@ -39,7 +39,67 @@ extension File.Directory {
     /// Async variant.
     public func delete(recursive: Bool = false) async throws {
         let options = File.System.Delete.Options(recursive: recursive)
-        try File.System.Delete.delete(at: path, options: options)
+        try await File.System.Delete.delete(at: path, options: options)
+    }
+
+    /// Copies the directory to a destination path.
+    ///
+    /// - Parameter destination: The destination path.
+    /// - Throws: `File.System.Copy.Error` on failure.
+    public func copy(to destination: File.Path) throws {
+        try File.System.Copy.copy(from: path, to: destination)
+    }
+
+    /// Copies the directory to a destination.
+    ///
+    /// - Parameter destination: The destination directory.
+    /// - Throws: `File.System.Copy.Error` on failure.
+    public func copy(to destination: File.Directory) throws {
+        try File.System.Copy.copy(from: path, to: destination.path)
+    }
+
+    /// Copies the directory to a destination path.
+    ///
+    /// Async variant.
+    public func copy(to destination: File.Path) async throws {
+        try await File.System.Copy.copy(from: path, to: destination)
+    }
+
+    /// Copies the directory to a destination.
+    ///
+    /// Async variant.
+    public func copy(to destination: File.Directory) async throws {
+        try await File.System.Copy.copy(from: path, to: destination.path)
+    }
+
+    /// Moves the directory to a destination path.
+    ///
+    /// - Parameter destination: The destination path.
+    /// - Throws: `File.System.Move.Error` on failure.
+    public func move(to destination: File.Path) throws {
+        try File.System.Move.move(from: path, to: destination)
+    }
+
+    /// Moves the directory to a destination.
+    ///
+    /// - Parameter destination: The destination directory.
+    /// - Throws: `File.System.Move.Error` on failure.
+    public func move(to destination: File.Directory) throws {
+        try File.System.Move.move(from: path, to: destination.path)
+    }
+
+    /// Moves the directory to a destination path.
+    ///
+    /// Async variant.
+    public func move(to destination: File.Path) async throws {
+        try await File.System.Move.move(from: path, to: destination)
+    }
+
+    /// Moves the directory to a destination.
+    ///
+    /// Async variant.
+    public func move(to destination: File.Directory) async throws {
+        try await File.System.Move.move(from: path, to: destination.path)
     }
 }
 
@@ -54,6 +114,33 @@ extension File.Directory {
     /// Returns `true` if the path is a directory.
     public var isDirectory: Bool {
         File.System.Stat.isDirectory(at: path)
+    }
+
+    /// Returns `true` if the path is a symbolic link.
+    public var isSymlink: Bool {
+        File.System.Stat.isSymlink(at: path)
+    }
+}
+
+// MARK: - Metadata
+
+extension File.Directory {
+    /// Returns directory metadata information.
+    ///
+    /// - Throws: `File.System.Stat.Error` on failure.
+    public var info: File.System.Metadata.Info {
+        get throws {
+            try File.System.Stat.info(at: path)
+        }
+    }
+
+    /// Returns the directory permissions.
+    ///
+    /// - Throws: `File.System.Stat.Error` on failure.
+    public var permissions: File.System.Metadata.Permissions {
+        get throws {
+            try info.permissions
+        }
     }
 }
 
@@ -72,7 +159,7 @@ extension File.Directory {
     ///
     /// Async variant. Use `entries()` for true streaming iteration.
     public func contents() async throws -> [File.Directory.Entry] {
-        try File.Directory.Contents.list(at: path)
+        try await File.Directory.Contents.list(at: path)
     }
 
     /// Returns all files in the directory.

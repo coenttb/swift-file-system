@@ -12,7 +12,7 @@ import TestingPerformance
 
 @testable import File_System_Async
 
-extension File.System.Async.Test.Performance {
+extension File.IO.Test.Performance {
 
     // MARK: - Executor Performance
 
@@ -384,11 +384,9 @@ extension File.System.Async.Test.Performance {
             let executor = File.IO.Executor()
             defer { Task { await executor.shutdown() } }
 
-            let system = File.System.Async(io: executor)
-
-            // 50 stat operations
+            // 50 stat operations using static async methods
             for _ in 0..<50 {
-                let exists = try await system.exists(filePath)
+                let exists = await File.System.Stat.exists(at: filePath, io: executor)
                 #expect(exists)
             }
         }
@@ -414,10 +412,9 @@ extension File.System.Async.Test.Performance {
             let executor = File.IO.Executor()
             defer { Task { await executor.shutdown() } }
 
-            let system = File.System.Async(io: executor)
-            try await system.copy(from: sourcePath, to: destPath)
+            try await File.System.Copy.copy(from: sourcePath, to: destPath, io: executor)
 
-            let destExists = try await system.exists(destPath)
+            let destExists = await File.System.Stat.exists(at: destPath, io: executor)
             #expect(destExists)
         }
     }

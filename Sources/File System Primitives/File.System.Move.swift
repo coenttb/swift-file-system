@@ -49,26 +49,6 @@ extension File.System.Move {
 // MARK: - Core API
 
 extension File.System.Move {
-    /// Moves (renames) a file from source to destination.
-    ///
-    /// Uses atomic `rename()` when possible. Falls back to copy+delete
-    /// for cross-device moves.
-    ///
-    /// - Parameters:
-    ///   - source: The source file path.
-    ///   - destination: The destination file path.
-    /// - Throws: `File.System.Move.Error` on failure.
-    public static func move(
-        from source: File.Path,
-        to destination: File.Path
-    ) throws(Error) {
-        #if os(Windows)
-            try _moveWindows(from: source, to: destination, options: Options())
-        #else
-            try _movePOSIX(from: source, to: destination, options: Options())
-        #endif
-    }
-
     /// Moves (renames) a file from source to destination with options.
     ///
     /// - Parameters:
@@ -79,7 +59,7 @@ extension File.System.Move {
     public static func move(
         from source: File.Path,
         to destination: File.Path,
-        options: Options
+        options: Options = .init()
     ) throws(Error) {
         #if os(Windows)
             try _moveWindows(from: source, to: destination, options: options)

@@ -50,25 +50,13 @@ extension File.System.Delete {
 // MARK: - Core API
 
 extension File.System.Delete {
-    /// Deletes a file or empty directory at the specified path.
-    ///
-    /// - Parameter path: The path to delete.
-    /// - Throws: `File.System.Delete.Error` on failure.
-    public static func delete(at path: File.Path) throws(Error) {
-        #if os(Windows)
-            try _deleteWindows(at: path, options: Options())
-        #else
-            try _deletePOSIX(at: path, options: Options())
-        #endif
-    }
-
     /// Deletes a file or directory at the specified path with options.
     ///
     /// - Parameters:
     ///   - path: The path to delete.
     ///   - options: Delete options (e.g., recursive).
     /// - Throws: `File.System.Delete.Error` on failure.
-    public static func delete(at path: File.Path, options: Options) throws(Error) {
+    public static func delete(at path: File.Path, options: Options = .init()) throws(Error) {
         #if os(Windows)
             try _deleteWindows(at: path, options: options)
         #else

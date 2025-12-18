@@ -76,35 +76,6 @@ extension File.System.Stat {
         #endif
     }
 
-    /// Checks if the path is a regular file.
-    ///
-    /// - Parameter path: The path to check.
-    /// - Returns: `true` if the path is a regular file, `false` otherwise.
-    public static func isFile(at path: File.Path) -> Bool {
-        guard let info = try? info(at: path) else { return false }
-        return info.type == .regular
-    }
-
-    /// Checks if the path is a directory.
-    ///
-    /// - Parameter path: The path to check.
-    /// - Returns: `true` if the path is a directory, `false` otherwise.
-    public static func isDirectory(at path: File.Path) -> Bool {
-        guard let info = try? info(at: path) else { return false }
-        return info.type == .directory
-    }
-
-    /// Checks if the path is a symbolic link.
-    ///
-    /// - Parameter path: The path to check.
-    /// - Returns: `true` if the path is a symbolic link, `false` otherwise.
-    public static func isSymlink(at path: File.Path) -> Bool {
-        #if os(Windows)
-            return _isSymlinkWindows(at: path)
-        #else
-            return _isSymlinkPOSIX(at: path)
-        #endif
-    }
 }
 
 // MARK: - CustomStringConvertible for Error

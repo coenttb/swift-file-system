@@ -8,6 +8,16 @@
 // MARK: - Seek Conveniences
 
 extension File.Handle {
+    /// Returns the current position in the file.
+    ///
+    /// Equivalent to `seek(to: 0, from: .current)`.
+    ///
+    /// - Returns: The current file position.
+    /// - Throws: `File.Handle.Error` on failure.
+    public mutating func position() throws(Error) -> Int64 {
+        try seek(to: 0, from: .current)
+    }
+
     /// Seeks to the beginning of the file.
     ///
     /// Equivalent to `seek(to: 0, from: .start)`.

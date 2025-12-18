@@ -6,3 +6,4 @@
 //
 
 @_exported public import File_System_Primitives
+@_exported public import File_System_Async

@@ -58,62 +58,38 @@ extension File.System.Test.Unit {
             #expect(File.System.Stat.exists(at: filePath) == false)
         }
 
-        // MARK: - isFile()
+        // MARK: - Type checks via info()
 
-        @Test("isFile returns true for regular file")
-        func isFileReturnsTrueForFile() throws {
+        @Test("info returns regular type for file")
+        func infoReturnsRegularForFile() throws {
             let path = try createTempFile()
             defer { cleanup(path) }
 
             let filePath = try File.Path(path)
-            #expect(File.System.Stat.isFile(at: filePath) == true)
+            let info = try File.System.Stat.info(at: filePath)
+            #expect(info.type == .regular)
         }
 
-        @Test("isFile returns false for directory")
-        func isFileReturnsFalseForDirectory() throws {
+        @Test("info returns directory type for directory")
+        func infoReturnsDirectoryForDirectory() throws {
             let path = try createTempDirectory()
             defer { cleanup(path) }
 
             let filePath = try File.Path(path)
-            #expect(File.System.Stat.isFile(at: filePath) == false)
+            let info = try File.System.Stat.info(at: filePath)
+            #expect(info.type == .directory)
         }
 
-        @Test("isFile returns false for non-existing path")
-        func isFileReturnsFalseForNonExisting() throws {
+        @Test("info throws for non-existing path")
+        func infoThrowsForNonExisting() throws {
             let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
-            #expect(File.System.Stat.isFile(at: filePath) == false)
+            #expect(throws: File.System.Stat.Error.self) {
+                _ = try File.System.Stat.info(at: filePath)
+            }
         }
 
-        // MARK: - isDirectory()
-
-        @Test("isDirectory returns true for directory")
-        func isDirectoryReturnsTrueForDirectory() throws {
-            let path = try createTempDirectory()
-            defer { cleanup(path) }
-
-            let filePath = try File.Path(path)
-            #expect(File.System.Stat.isDirectory(at: filePath) == true)
-        }
-
-        @Test("isDirectory returns false for regular file")
-        func isDirectoryReturnsFalseForFile() throws {
-            let path = try createTempFile()
-            defer { cleanup(path) }
-
-            let filePath = try File.Path(path)
-            #expect(File.System.Stat.isDirectory(at: filePath) == false)
-        }
-
-        @Test("isDirectory returns false for non-existing path")
-        func isDirectoryReturnsFalseForNonExisting() throws {
-            let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
-            #expect(File.System.Stat.isDirectory(at: filePath) == false)
-        }
-
-        // MARK: - isSymlink()
-
-        @Test("isSymlink returns true for symlink")
-        func isSymlinkReturnsTrueForSymlink() throws {
+        @Test("lstatInfo returns symbolicLink type for symlink")
+        func lstatInfoReturnsSymlinkForSymlink() throws {
             let targetPath = try createTempFile()
             let linkPath = "/tmp/stat-test-link-\(UUID().uuidString)"
             defer {
@@ -127,25 +103,28 @@ extension File.System.Test.Unit {
             )
 
             let filePath = try File.Path(linkPath)
-            #expect(File.System.Stat.isSymlink(at: filePath) == true)
+            let info = try File.System.Stat.lstatInfo(at: filePath)
+            #expect(info.type == .symbolicLink)
         }
 
-        @Test("isSymlink returns false for regular file")
-        func isSymlinkReturnsFalseForFile() throws {
+        @Test("lstatInfo returns regular type for file (not symlink)")
+        func lstatInfoReturnsRegularForFile() throws {
             let path = try createTempFile()
             defer { cleanup(path) }
 
             let filePath = try File.Path(path)
-            #expect(File.System.Stat.isSymlink(at: filePath) == false)
+            let info = try File.System.Stat.lstatInfo(at: filePath)
+            #expect(info.type == .regular)
         }
 
-        @Test("isSymlink returns false for directory")
-        func isSymlinkReturnsFalseForDirectory() throws {
+        @Test("lstatInfo returns directory type for directory (not symlink)")
+        func lstatInfoReturnsDirectoryForDirectory() throws {
             let path = try createTempDirectory()
             defer { cleanup(path) }
 
             let filePath = try File.Path(path)
-            #expect(File.System.Stat.isSymlink(at: filePath) == false)
+            let info = try File.System.Stat.lstatInfo(at: filePath)
+            #expect(info.type == .directory)
         }
 
         // MARK: - info()
@@ -194,15 +173,6 @@ extension File.System.Test.Unit {
             #expect(info.type == .regular)
         }
 
-        @Test("info throws for non-existing path")
-        func infoThrowsForNonExisting() throws {
-            let filePath = try File.Path("/tmp/non-existing-\(UUID().uuidString)")
-
-            #expect(throws: File.System.Stat.Error.self) {
-                try File.System.Stat.info(at: filePath)
-            }
-        }
-
         // MARK: - Async variants
 
         @Test("async exists works")
@@ -215,27 +185,7 @@ extension File.System.Test.Unit {
             #expect(exists == true)
         }
 
-        @Test("async isFile works")
-        func asyncIsFile() async throws {
-            let path = try createTempFile()
-            defer { cleanup(path) }
-
-            let filePath = try File.Path(path)
-            let isFile = await File.System.Stat.isFile(at: filePath)
-            #expect(isFile == true)
-        }
-
-        @Test("async isDirectory works")
-        func asyncIsDirectory() async throws {
-            let path = try createTempDirectory()
-            defer { cleanup(path) }
-
-            let filePath = try File.Path(path)
-            let isDirectory = await File.System.Stat.isDirectory(at: filePath)
-            #expect(isDirectory == true)
-        }
-
-        @Test("async info works")
+        @Test("async info returns regular type for file")
         func asyncInfo() async throws {
             let path = try createTempFile()
             defer { cleanup(path) }

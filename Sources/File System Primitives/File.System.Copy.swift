@@ -62,23 +62,6 @@ extension File.System.Copy {
 // MARK: - Core API
 
 extension File.System.Copy {
-    /// Copies a file from source to destination.
-    ///
-    /// - Parameters:
-    ///   - source: The source file path.
-    ///   - destination: The destination file path.
-    /// - Throws: `File.System.Copy.Error` on failure.
-    public static func copy(
-        from source: File.Path,
-        to destination: File.Path
-    ) throws(Error) {
-        #if os(Windows)
-            try _copyWindows(from: source, to: destination, options: Options())
-        #else
-            try _copyPOSIX(from: source, to: destination, options: Options())
-        #endif
-    }
-
     /// Copies a file from source to destination with options.
     ///
     /// - Parameters:
@@ -89,7 +72,7 @@ extension File.System.Copy {
     public static func copy(
         from source: File.Path,
         to destination: File.Path,
-        options: Options
+        options: Options = .init()
     ) throws(Error) {
         #if os(Windows)
             try _copyWindows(from: source, to: destination, options: options)

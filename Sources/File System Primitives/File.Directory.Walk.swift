@@ -122,8 +122,9 @@ extension File.Directory.Walk {
             if entry.type == .directory {
                 try _walk(at: entry.path, options: options, depth: depth + 1, entries: &entries)
             } else if entry.type == .symbolicLink && options.followSymlinks {
-                // Check if symlink points to a directory
-                if File.System.Stat.isDirectory(at: entry.path) {
+                // Check if symlink points to a directory (follows symlink via stat)
+                if let info = try? File.System.Stat.info(at: entry.path),
+                   info.type == .directory {
                     try _walk(at: entry.path, options: options, depth: depth + 1, entries: &entries)
                 }
             }

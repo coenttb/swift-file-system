@@ -274,10 +274,10 @@ extension File.System.Test.Unit {
             let filePath = try File.Path(path)
             var handle = try File.Handle.open(filePath, mode: .read)
 
-            let pos1 = try handle.position()
+            let pos1 = try handle.seek(to: 0, from: .current)
             #expect(pos1 == 0)
             _ = try handle.read(count: 3)
-            let pos2 = try handle.position()
+            let pos2 = try handle.seek(to: 0, from: .current)
             #expect(pos2 == 3)
             try handle.close()
         }

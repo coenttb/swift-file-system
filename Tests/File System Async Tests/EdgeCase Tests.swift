@@ -10,7 +10,7 @@ import Testing
 
 @testable import File_System_Async
 
-extension File.System.Async.Test.EdgeCase {
+extension File.IO.Test.EdgeCase {
     // MARK: - Test Fixtures
 
     private func createTempPath() -> String {
@@ -856,8 +856,7 @@ extension File.System.Async.Test.EdgeCase {
 
         let path = try File.Path("/tmp/non-existent-\(UUID().uuidString)")
 
-        let system = File.System.Async(io: io)
-        let exists = try await system.exists(path)
+        let exists = await File.System.Stat.exists(at: path, io: io)
 
         #expect(!exists)
     }

@@ -10,7 +10,7 @@ import Testing
 
 @testable import File_System_Async
 
-extension File.System.Async.Test.Unit {
+extension File.IO.Test.Unit {
     @Suite("File.Directory.Walk")
     struct DirectoryWalk {
 
