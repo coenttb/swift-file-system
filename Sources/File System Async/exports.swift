@@ -7,4 +7,4 @@
 
 // Re-export primitives for consumers of the async layer
 @_exported import File_System_Primitives
-public import AsyncAlgorithms
+@_exported public import AsyncAlgorithms

@@ -265,46 +265,57 @@ extension Test.`File System`.Unit {
 
         @Test("lstatInfo returns symbolicLink type for symlink")
         func lstatInfoReturnsSymlinkType() throws {
-            let targetPath = try createTempFile()
-            let linkPath = "/tmp/stat-lstat-test-\(UUID().uuidString)"
+            let targetPath = try File.Path("/tmp/stat-lstat-target-\(UUID().uuidString).txt")
+            let linkPath = try File.Path("/tmp/stat-lstat-test-\(UUID().uuidString)")
             defer {
-                cleanup(targetPath)
-                cleanup(linkPath)
+                try? File.System.Delete.delete(at: targetPath)
+                try? File.System.Delete.delete(at: linkPath)
             }
 
-            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
+            // Create target file using our API
+            var handle = try File.Handle.open(targetPath, mode: .write, options: [.create, .closeOnExec])
+            try Array("test".utf8).withUnsafeBufferPointer { buffer in
+                try handle.write(Span<UInt8>(_unsafeElements: buffer))
+            }
+            try handle.close()
 
-            let filePath = try File.Path(linkPath)
+            // Create symlink using our API
+            try File.System.Link.Symbolic.create(at: linkPath, pointingTo: targetPath)
 
             // lstatInfo should return symbolicLink type (doesn't follow)
-            let lstatInfo = try File.System.Stat.lstatInfo(at: filePath)
+            let lstatInfo = try File.System.Stat.lstatInfo(at: linkPath)
             #expect(lstatInfo.type == .symbolicLink)
 
             // info should return regular type (follows symlink)
-            let statInfo = try File.System.Stat.info(at: filePath)
+            let statInfo = try File.System.Stat.info(at: linkPath)
             #expect(statInfo.type == .regular)
         }
 
         @Test("lstatInfo returns different inode than info for symlink")
         func lstatInfoReturnsDifferentInodeForSymlink() throws {
-            let targetPath = try createTempFile()
-            let linkPath = "/tmp/stat-inode-test-\(UUID().uuidString)"
+            let targetPath = try File.Path("/tmp/stat-inode-target-\(UUID().uuidString).txt")
+            let linkPath = try File.Path("/tmp/stat-inode-test-\(UUID().uuidString)")
             defer {
-                cleanup(targetPath)
-                cleanup(linkPath)
+                try? File.System.Delete.delete(at: targetPath)
+                try? File.System.Delete.delete(at: linkPath)
             }
 
-            try FileManager.default.createSymbolicLink(atPath: linkPath, withDestinationPath: targetPath)
+            // Create target file using our API
+            var handle = try File.Handle.open(targetPath, mode: .write, options: [.create, .closeOnExec])
+            try Array("test".utf8).withUnsafeBufferPointer { buffer in
+                try handle.write(Span<UInt8>(_unsafeElements: buffer))
+            }
+            try handle.close()
 
-            let filePath = try File.Path(linkPath)
-            let targetFilePath = try File.Path(targetPath)
+            // Create symlink using our API
+            try File.System.Link.Symbolic.create(at: linkPath, pointingTo: targetPath)
 
             // lstatInfo returns the symlink's own inode
-            let lstatInfo = try File.System.Stat.lstatInfo(at: filePath)
+            let lstatInfo = try File.System.Stat.lstatInfo(at: linkPath)
 
             // info on symlink follows to target, should have same inode as target
-            let statInfo = try File.System.Stat.info(at: filePath)
-            let targetInfo = try File.System.Stat.info(at: targetFilePath)
+            let statInfo = try File.System.Stat.info(at: linkPath)
+            let targetInfo = try File.System.Stat.info(at: targetPath)
 
             // The symlink has its own inode, different from the target
             #expect(lstatInfo.inode != targetInfo.inode)
@@ -315,10 +326,16 @@ extension Test.`File System`.Unit {
 
         @Test("lstatInfo same as info for regular file")
         func lstatInfoSameAsInfoForRegularFile() throws {
-            let path = try createTempFile()
-            defer { cleanup(path) }
+            let filePath = try File.Path("/tmp/stat-lstat-regular-\(UUID().uuidString).txt")
+            defer { try? File.System.Delete.delete(at: filePath) }
 
-            let filePath = try File.Path(path)
+            // Create file using our API
+            var handle = try File.Handle.open(filePath, mode: .write, options: [.create, .closeOnExec])
+            try Array("test content".utf8).withUnsafeBufferPointer { buffer in
+                try handle.write(Span<UInt8>(_unsafeElements: buffer))
+            }
+            try handle.close()
+
             let lstatInfo = try File.System.Stat.lstatInfo(at: filePath)
             let statInfo = try File.System.Stat.info(at: filePath)
 
