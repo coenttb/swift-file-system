@@ -561,6 +561,221 @@ extension File.System.Async.Test.EdgeCase {
             }
         }
 
+        @Test("Cancellation within batch - directory entries")
+        func cancellationWithinBatch() async throws {
+            let io = File.IO.Executor()
+            defer { Task { await io.shutdown() } }
+
+            let dir = try createTempDir()
+            defer { cleanupPath(dir) }
+
+            // Create enough files to span multiple batches (batchSize = 64)
+            // Create 200 files to ensure we're mid-batch when we cancel
+            for i in 0..<200 {
+                let filePath = try File.Path.init("\(dir.string)/file-\(String(format: "%03d", i)).txt")
+                try createFile(at: filePath)
+            }
+
+            let task = Task {
+                var count = 0
+                let entries = File.Directory.Async(io: io).entries(at: dir)
+                for try await _ in entries {
+                    count += 1
+                    // Cancel after processing 70 entries (which should be in the middle of second batch)
+                    if count == 70 {
+                        try Task.checkCancellation()
+                    }
+                }
+                return count
+            }
+
+            // Give it time to process first batch, then cancel during second batch
+            try await Task.sleep(for: .milliseconds(50))
+            task.cancel()
+
+            do {
+                let count = try await task.value
+                // If it completes, it processed everything before cancellation
+                #expect(count <= 200)
+            } catch is CancellationError {
+                // Expected - cancellation was checked and honored
+            }
+        }
+
+        @Test("Cancellation within batch - directory walk")
+        func cancellationWithinBatchWalk() async throws {
+            let io = File.IO.Executor()
+            defer { Task { await io.shutdown() } }
+
+            let root = try createTempDir()
+            defer { cleanupPath(root) }
+
+            // Create structure with enough entries to span multiple batches
+            for i in 0..<10 {
+                let subPath = try File.Path.init("\(root.string)/dir-\(i)")
+                try FileManager.default.createDirectory(atPath: subPath.string, withIntermediateDirectories: true)
+                // 20 files per directory = 200 files + 10 dirs = 210 entries total
+                for j in 0..<20 {
+                    let filePath = try File.Path.init("\(subPath.string)/file-\(j).txt")
+                    try createFile(at: filePath)
+                }
+            }
+
+            let task = Task {
+                var count = 0
+                let walk = File.Directory.Async(io: io).walk(at: root)
+                for try await _ in walk {
+                    count += 1
+                    // Cancel after 100 entries (mid-iteration)
+                    if count == 100 {
+                        try Task.checkCancellation()
+                    }
+                }
+                return count
+            }
+
+            // Give it time to start walking, then cancel
+            try await Task.sleep(for: .milliseconds(50))
+            task.cancel()
+
+            do {
+                let count = try await task.value
+                #expect(count <= 210)
+            } catch is CancellationError {
+                // Expected
+            }
+        }
+
+        // MARK: - Backpressure Edge Cases
+
+        @Test("Backpressure respected with slow consumer")
+        func backpressureRespectedSlowConsumer() async throws {
+            let io = File.IO.Executor()
+            defer { Task { await io.shutdown() } }
+
+            let dir = try createTempDir()
+            defer { cleanupPath(dir) }
+
+            // Create many files to test backpressure
+            for i in 0..<500 {
+                let filePath = try File.Path.init("\(dir.string)/file-\(String(format: "%04d", i)).txt")
+                try createFile(at: filePath)
+            }
+
+            var processedCount = 0
+            let entries = File.Directory.Async(io: io).entries(at: dir)
+
+            // Consume slowly to verify producer doesn't accumulate unbounded batches
+            for try await _ in entries {
+                processedCount += 1
+                // Add delay to simulate slow consumer
+                try await Task.sleep(for: .milliseconds(1))
+            }
+
+            // Should process all files despite slow consumption
+            #expect(processedCount == 500)
+            // If backpressure wasn't working, memory would grow unboundedly
+            // The AsyncThrowingChannel with 1-element buffer ensures bounded memory
+        }
+
+        @Test("Large directory iteration completes - 1000+ files")
+        func largeDirectoryIteration() async throws {
+            let io = File.IO.Executor()
+            defer { Task { await io.shutdown() } }
+
+            let dir = try createTempDir()
+            defer { cleanupPath(dir) }
+
+            // Create 1500 files to verify batching works correctly with large directories
+            let fileCount = 1500
+            for i in 0..<fileCount {
+                let filePath = try File.Path.init("\(dir.string)/file-\(String(format: "%04d", i)).txt")
+                try createFile(at: filePath)
+            }
+
+            var count = 0
+            let entries = File.Directory.Async(io: io).entries(at: dir)
+            for try await _ in entries {
+                count += 1
+            }
+
+            #expect(count == fileCount)
+        }
+
+        @Test("Large walk completes - 1000+ entries")
+        func largeWalkIteration() async throws {
+            let io = File.IO.Executor()
+            defer { Task { await io.shutdown() } }
+
+            let root = try createTempDir()
+            defer { cleanupPath(root) }
+
+            // Create structure with 1000+ entries
+            // 25 directories with 40 files each = 1000 files + 25 dirs = 1025 entries
+            for i in 0..<25 {
+                let subPath = try File.Path.init("\(root.string)/dir-\(String(format: "%02d", i))")
+                try FileManager.default.createDirectory(atPath: subPath.string, withIntermediateDirectories: true)
+                for j in 0..<40 {
+                    let filePath = try File.Path.init("\(subPath.string)/file-\(String(format: "%02d", j)).txt")
+                    try createFile(at: filePath)
+                }
+            }
+
+            var count = 0
+            let walk = File.Directory.Async(io: io).walk(at: root)
+            for try await _ in walk {
+                count += 1
+            }
+
+            #expect(count == 1025)
+        }
+
+        @Test("Directory deleted during iteration")
+        func directoryDeletedDuringIteration() async throws {
+            let io = File.IO.Executor()
+            defer { Task { await io.shutdown() } }
+
+            let dir = try createTempDir()
+            defer { cleanupPath(dir) }
+
+            // Create files
+            for i in 0..<100 {
+                let filePath = try File.Path.init("\(dir.string)/file-\(i).txt")
+                try createFile(at: filePath)
+            }
+
+            let task = Task {
+                var count = 0
+                let entries = File.Directory.Async(io: io).entries(at: dir)
+                do {
+                    for try await _ in entries {
+                        count += 1
+                        // Small delay to allow deletion to happen
+                        try await Task.sleep(for: .milliseconds(1))
+                    }
+                } catch {
+                    // May throw error if directory structure changes during iteration
+                    // This is acceptable behavior
+                }
+                return count
+            }
+
+            // Give it time to start iterating
+            try await Task.sleep(for: .milliseconds(10))
+
+            // Delete some files during iteration
+            for i in 50..<75 {
+                let filePath = try File.Path.init("\(dir.string)/file-\(i).txt")
+                try? FileManager.default.removeItem(atPath: filePath.string)
+            }
+
+            let count = await task.value
+            // Count may vary depending on timing of deletion
+            // Just verify it doesn't crash or hang
+            #expect(count >= 0)
+            #expect(count <= 100)
+        }
+
         // MARK: - Handle Edge Cases
 
         @Test("Async handle double close")

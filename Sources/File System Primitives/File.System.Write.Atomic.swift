@@ -169,7 +169,15 @@ extension File.System.Write.Atomic {
             try write(span, to: path, options: options)
         }
     }
+}
 
+extension Binary.Serializable {
+    public func write(
+        to path: File.Path,
+        options: File.System.Write.Atomic.Options = .init()
+    ) throws(File.System.Write.Atomic.Error) {
+        try File.System.Write.Atomic.write(self, to: path, options: options)
+    }
 }
 
 // MARK: - Internal Helpers

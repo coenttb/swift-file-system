@@ -49,14 +49,24 @@ extension File.System.Copy {
         var destStat = stat()
         let destExists = stat(destination.string, &destStat) == 0
 
-        if destExists && !options.overwrite {
-            throw .destinationExists(destination)
+        if destExists {
+            if !options.overwrite {
+                throw .destinationExists(destination)
+            }
+            // Cannot overwrite a directory
+            if (destStat.st_mode & S_IFMT) == S_IFDIR {
+                throw .isDirectory(destination)
+            }
         }
 
         // Darwin: try kernel-assisted copy first (before opening fds)
+        // Note: We only use the fast path when copyAttributes is true, because
+        // copyfile() always copies permissions even with COPYFILE_DATA only
         #if canImport(Darwin)
-        if _copyDarwinFast(from: source, to: destination, options: options) {
-            return
+        if options.copyAttributes {
+            if _copyDarwinFast(from: source, to: destination, options: options) {
+                return
+            }
         }
         #endif
 
@@ -69,7 +79,8 @@ extension File.System.Copy {
 
         // Create/truncate destination
         let dstFlags: Int32 = O_WRONLY | O_CREAT | O_TRUNC
-        let dstMode = sourceStat.st_mode & 0o7777
+        // When copyAttributes is true, preserve source permissions; otherwise use default (0o666 modified by umask)
+        let dstMode: mode_t = options.copyAttributes ? (sourceStat.st_mode & 0o7777) : 0o666
         let dstFd = open(destination.string, dstFlags, dstMode)
         guard dstFd >= 0 else {
             throw _mapErrno(errno, source: source, destination: destination)
@@ -188,12 +199,15 @@ extension File.System.Copy {
             flags |= copyfile_flags_t(COPYFILE_UNLINK)
         }
 
-        // Try clone first (APFS instant copy - metadata only)
-        if copyfile(source.string, destination.string, nil, flags | copyfile_flags_t(COPYFILE_CLONE_FORCE)) == 0 {
-            return true
+        // Try clone first (APFS instant copy) - but only when copying attributes,
+        // because clone always preserves metadata regardless of COPYFILE_DATA flag
+        if options.copyAttributes {
+            if copyfile(source.string, destination.string, nil, flags | copyfile_flags_t(COPYFILE_CLONE_FORCE)) == 0 {
+                return true
+            }
         }
 
-        // Fall back to full kernel copy
+        // Fall back to full kernel copy (COPYFILE_DATA or COPYFILE_ALL)
         if copyfile(source.string, destination.string, nil, flags) == 0 {
             return true
         }
