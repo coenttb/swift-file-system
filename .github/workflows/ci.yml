@@ -95,3 +95,21 @@ jobs:
       # Note: swift test builds automatically
       - name: Test (Swift 6.2)
         run: swift test -c release
+
+  windows-latest:
+    name: Windows (Swift 6.2, release)
+    runs-on: windows-latest
+    container: swift:6.2
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: windows-swift62-spm-${{ hashFiles('Package.swift', 'Package@*.swift') }}
+          restore-keys: windows-swift62-spm-
+
+      # Note: swift test builds automatically in release mode
+      - name: Test (release)
+        run: swift test -c release
