@@ -106,7 +106,7 @@ jobs:
       - name: Install Swift
         uses: SwiftyLab/setup-swift@latest
         with:
-          swift-version: "6.0"
+          swift-version: "6.2"
 
       - name: Print Swift version
         run: swift --version
