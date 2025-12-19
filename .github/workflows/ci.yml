@@ -98,7 +98,7 @@ jobs:
 
   # Windows validation (no container - use setup-swift action)
   windows-latest:
-    name: Windows (Swift 6.0)
+    name: Windows (Swift 6.2)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
